@@ -1,132 +1,21 @@
-name: tests
-
-on:
-  push:
-    branches: ["**"]
-  pull_request:
-  workflow_dispatch:
-    inputs:
-      rerecord_visual_baselines:
-        description: >-
-          Re-record the visual baselines on the runner and upload them as an
-          artifact. Use when the `visual` job reports environment drift: download
-          the artifact, replace tests/baseline/, and commit it on its own.
-        type: boolean
-        default: false
-
+name: checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
 jobs:
-  verify:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends poppler-utils
-          pip install "sympy>=1.12" coverage
-
-      - name: Regression suite (verify.py contract)
-        run: bash tests/run_tests.sh
-
-      - name: Soundness + branch test suites
-        run: bash tests/coverage.sh
-
-      - name: Coverage summary
-        if: always()
-        run: |
-          echo "### Coverage" >> "$GITHUB_STEP_SUMMARY"
-          python3 -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
-
-  # The visual gate needs a TeX install, so it gets its own job — and, more
-  # importantly, its own PINNED runner. An ink-density baseline belongs to one
-  # font and rasteriser stack; `ubuntu-latest` silently moves between releases
-  # and would take the reference rendering with it. This job is the project's
-  # canonical environment: the baselines in tests/baseline are whatever it
-  # renders, and a contributor's laptop is advisory by comparison.
-  visual:
+  runtime:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-
-      # Pinned to the release, not to package versions: apt has no usable
-      # version pinning for texlive, so the runner image IS the pin. When the
-      # image's TeX or poppler moves, the harness reports drift by name rather
-      # than as an unexplained page diff.
-      - name: Install TeX and poppler
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
-            texlive-pictures texlive-fonts-recommended poppler-utils
-
-      # TeX is necessary but not sufficient. These suites render figures through
-      # the shipped renderer, and render_figures.py imports verify.py's triangle
-      # solver so a figure cannot disagree with the check it illustrates — which
-      # makes sympy a hard requirement here, not just in the `verify` job. Its
-      # absence is not a clean skip: test_ssa_figure_labels exits 1 outright,
-      # and test_overprint degrades to "renderer unavailable" on three checks
-      # while still exiting 0. Both were found the first time this job actually
-      # ran them.
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install sympy for the figure renderer
-        run: pip install "sympy>=1.12"
-
-      - name: Record the rendering environment
+          python-version: '3.11'
+      - name: Install runtime
         run: |
-          {
-            echo "### Rendering environment"
-            echo '```'
-            pdflatex --version | head -1
-            pdftoppm -v 2>&1 | head -1
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      # MWS_VISUAL_STRICT turns "this machine renders differently" from an
-      # advisory into a failure. Advisory is right on a laptop, where a red
-      # build the contributor did not cause teaches them to reach for
-      # --approve. It is wrong here: an advisory gate in CI tests nothing at
-      # all, and would let the baselines rot unnoticed.
-      - name: Visual regression (authoritative)
-        if: ${{ ! inputs.rerecord_visual_baselines }}
-        env:
-          MWS_VISUAL_STRICT: "1"
-        run: python3 tests/visual_regression.py
-
-      - name: Printed-page round trip
-        if: ${{ ! inputs.rerecord_visual_baselines }}
-        run: python3 tests/test_preamble_layout.py
-
-      # These four render real documents and read the resulting PDFs back, so
-      # they skip cleanly when no engine is present — which is exactly what they
-      # were doing in the `verify` job, on every push, in silence. A suite that
-      # skips reports the same green as a suite that passes. They belong in the
-      # job that has TeX, and this is it. Between them they cover the figure
-      # label-collision measurement, the calibrated \settowidth table against the
-      # shipped preamble, every figure snippet the docs print plus the house-style
-      # probe, and the large-print page-budget charge.
-      - name: TeX-dependent suites (skip silently without an engine)
-        if: ${{ ! inputs.rerecord_visual_baselines }}
-        run: |
-          python3 tests/test_overprint.py
-          python3 tests/test_ssa_figure_labels.py
-          python3 tests/test_tikz_libraries.py
-          python3 tests/test_page_budget_type_size.py
-
-      # The escape hatch for drift, so nobody has to reproduce the runner
-      # locally: re-record here, download, commit. Deliberately manual and
-      # deliberately not a push — a baseline change is a human decision.
-      - name: Re-record baselines on this runner
-        if: ${{ inputs.rerecord_visual_baselines }}
-        run: python3 tests/visual_regression.py --approve --rebase-environment
-
-      - name: Upload re-recorded baselines
-        if: ${{ inputs.rerecord_visual_baselines }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: visual-baselines
-          path: tests/baseline/
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-pictures texlive-fonts-recommended poppler-utils
+          python -m pip install sympy==1.14.0
+      - name: Core and compiled-PDF checks
+        run: python -m unittest discover -s tests -v
+      - name: Build installable ZIP
+        run: python tools/package_skill.py

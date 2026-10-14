@@ -17,13 +17,17 @@
 
 find_sympy_python() {
   local candidates=() tried=() first_existing="" p repo_root
-  if [[ -n "${MWS_PYTHON_CANDIDATES:-}" ]]; then
+  if [[ -n "${MWS_PYTHON:-}" ]]; then
+    candidates=("$MWS_PYTHON")
+  elif [[ -n "${MWS_PYTHON_CANDIDATES:-}" ]]; then
     read -r -a candidates <<< "$MWS_PYTHON_CANDIDATES"
   else
     repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
     candidates=(
       "$repo_root/.venv/bin/python3"
+      "$repo_root/.venv/Scripts/python.exe"
       "$(command -v python3 2>/dev/null || true)"
+      "$(command -v python 2>/dev/null || true)"
       "/opt/homebrew/bin/python3"
       "/usr/local/bin/python3"
       "/usr/bin/python3"

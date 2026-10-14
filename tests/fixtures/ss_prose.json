@@ -1,8 +1,0 @@
-{
-  "topic": "study-guide prose binding fixtures — approx entries whose exprs carry the prose givens",
-  "problem_count": 2,
-  "problems": [
-    {"id": 1, "type": "approx", "expr": "10*sin(40*pi/180)", "expected": 6.43, "tol": 0.01},
-    {"id": 2, "type": "approx", "expr": "atan(30/45)*180/pi", "expected": 33.69, "tol": 0.01}
-  ]
-}

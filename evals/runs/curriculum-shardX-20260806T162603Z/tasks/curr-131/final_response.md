@@ -1,7 +1,0 @@
-Here are the three PDFs for the fraction-of-a-number worksheet (Grades 4–5):
-
-- **Worksheet** (`ws_fracof_curr131.pdf`) — 10 guided concept problems on interpreting a fraction of a whole number or set. It opens with a counters picture to ring equal groups, builds from unit fractions (1/4 of 12) to any fraction of a set (3/5 of 20 stickers, 3/8 of a class of 24 with a scaffolded part (a)/(b)), includes two backward "find the whole" problems, a money problem in dollars, and a challenge that asks for an explanation with a model.
-- **Answer key** (`ak_fracof_curr131.pdf`) — quick-answers bank plus step-by-step solutions that consistently model the divide-then-multiply equal-groups strategy, with boxed final answers.
-- **Study guide** (`ss_fracof_curr131.pdf`) — a reference card teaching the three skills tested: a unit fraction of a number, any fraction of a number, and finding the whole from a part — each with a rule box, worked example, and try-it, plus a watch-out about "of" not always meaning multiply.
-
-**What is verified:** 12 of the 13 printed responses are machine-checked with SymPy (problems 3, 6, and 10 have two parts each). One response is flagged for instructor judgment: the challenge's part (b) explanation with a model — the answer key states exactly what a correct model must show (four equal groups of 7, three of them filled). All 6 study-guide examples and try-its are machine-verified. The full gate chain passed (exit 2 = green with that one manual-review item).

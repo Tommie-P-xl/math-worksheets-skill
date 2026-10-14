@@ -1,9 +1,0 @@
-% ws fixture for the STALE-FIGS case: the prose and verify JSON
-% (figs_demo_edited.json) say c = 10, but the figs file spliced in was
-% rendered from the OLD JSON (c = 9). check_prose_consistency --figs must
-% flag the figure label 9 — proving CASE-21 stays sighted through \probfig.
-\documentclass{article}\usepackage{tikz,enumitem}\begin{document}
-\begin{enumerate}[leftmargin=*]
-  \item In triangle $ABC$, $a = 7$, $b = 8$, $c = 10$. Find the measure of angle $A$.
-  \probfig{1}\vspace{5cm}
-\end{enumerate}\end{document}

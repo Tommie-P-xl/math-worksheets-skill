@@ -1,7 +1,0 @@
-Here are the three PDFs for the like-denominators fractions worksheet (Grades 4–5):
-
-- **Worksheet** (`ws_likefrac_curr126.pdf`) — 10 guided concept problems on adding and subtracting fractions with like denominators. Two problems come with shaded bar models that connect the picture to the number sentence, and the set also includes decomposing a fraction into unit fractions, missing-addend puzzles, two word problems with units, and a two-step challenge about a water bottle.
-- **Answer key** (`ak_likefrac_curr126.pdf`) — quick-answers bank for fast grading plus a full reasoned solution for every problem ("same-size pieces, so add the counts"), each ending in a boxed answer in simplest form.
-- **Study guide** (`ss_likefrac_curr126.pdf`) — a reference card teaching all three skills on the sheet (adding, subtracting, decomposing), each with a rule box, a short worked example, and a try-it with the answer printed upside down, plus a watch-out box on the "add the denominators" mistake.
-
-**What is verified:** 12 of the 13 printed responses are machine-checked with SymPy (problems 2 and 10 each have two blanks, problem 9 has a computed answer plus a written part). One response is flagged for instructor judgment: problem 9's short explanation of why the denominator stays 12 — the answer key states what a correct explanation must contain. All 6 study-guide worked examples and try-its are machine-verified. The full gate chain passed (exit 2 = green with that one manual-review item, as expected).

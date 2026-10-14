@@ -1,6 +1,0 @@
-{
-  "problems": [
-    {"id": 1, "given": {"height_m": 100, "elevation_deg": 52}, "expected": "78.13"},
-    {"id": 2, "given": {"height_m": 100, "elevation_deg": 52}, "expected": "126.89"}
-  ]
-}

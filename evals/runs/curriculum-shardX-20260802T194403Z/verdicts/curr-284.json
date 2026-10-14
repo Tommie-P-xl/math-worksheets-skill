@@ -1,7 +1,0 @@
-{
-  "schema_version":"1.0","task_id":"curr-284","judge":{"type":"independent_codex_judge","id":"gpt-5.6","agent":"codex","model":"gpt-5.6","completed_at":"2026-08-04T00:20:00Z"},"verdict":"ACCEPT","hard_failures":[],
-  "dimension_scores":{"curriculum_alignment":4,"problem_set_design":4,"mathematical_correctness":4,"answer_key_quality":4,"study_guide_quality":4,"clarity_and_accessibility":4,"visual_and_print_quality":4,"instruction_following":4},"total_score":32,"manual_items_reviewed":1,"incorrect_or_ambiguous_items":[],"errors":[],
-  "critical_observations":["Checked every vertex, minimum or maximum, transformation equation, evaluation, and intercept independently.","Manually reviewed the study-card error analysis; each one-way sign rule is correctly diagnosed and repaired."],
-  "artifact_findings":["The packet consistently distinguishes horizontal opposite-sign shifts from vertical same-sign shifts and from reflection or stretch factors."],
-  "rationale":"Excellent misconception analysis for parabola transformations, with mathematically exact corrections and effective sign checks."
-}

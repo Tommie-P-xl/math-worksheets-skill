@@ -1,644 +1,149 @@
 #!/usr/bin/env bash
-# build.sh — the single gate-chain driver: verify JSON in, three gated PDFs out.
-#
-# Usage: build.sh <verify_<stem>.json> [--outdir DIR] [--worksheet-only]
-#        build.sh <verify_ss_<stem>.json> --study-guide-only [--outdir DIR]
-#                 [--ws FILE] [--ak FILE] [--ss FILE] [--verify-ss FILE]
-#
-# WHY: the skill used to prescribe nine separate gate commands spread across
-# four prose sections — an agent could skip any of them and nothing noticed
-# (it happened twice in one audited session). This driver runs every gate in
-# order, fail-fast, and ends with ONE machine-checkable verdict line, so
-# "did the gates run" stops being a matter of prose discipline. A plain
-# `a && b && c` chain cannot replace it: run_verify's exit 2 means "manual
-# review, safe to compile" and must continue, while check_prose's exit 2
-# means "parsed zero problems" and must stop — only a script can encode that.
-#
-# DOCUMENT DISCOVERY (in the verify JSON's directory):
-#   verify_<stem>.json  →  ws_<stem>.tex, ak_<stem>.tex, ss_<stem>.tex,
-#                          and verify_ss_<stem>.json for the study guide.
-#   Also recognized per role: an optional student-name prefix
-#   (leo_ws_<stem>.tex) and a tier letter inside the role token
-#   (wsS_/wsC_/wsX_<stem>.tex — SKILL.md "Tiered worksheets"; give each tier
-#   its own stem, e.g. verify_factoring_S_<date>.json, so tiers never share a
-#   stem in one directory). More than one match for a role is an ERROR (name
-#   them apart or pass --ws/--ak/--ss explicitly). Missing ak_/ss_ documents
-#   are ERRORS, not skips — the skill mandates three documents — unless
-#   --worksheet-only is given.
-#
-# GATE ORDER (fail-fast: the first FAIL stops the run and nothing after it
-# executes; in particular nothing compiles after a failed verification):
-#    1 template-*      tests/check_template_use.py on ws, ak, ss — the shell
-#                      must \input{worksheet-preamble}, never hand-roll it
-#                      (cheapest check first; nothing verifies or compiles a
-#                      hand-rolled shell)
-#    2 verify-ws       run_verify.sh on the worksheet JSON (2 = MANUAL, continue)
-#    3 verify-ss       run_verify.sh on the study-guide JSON
-#    4 coverage-ss     tests/check_ss_coverage.py — every "skill" the
-#                      worksheet tags must have a tagged study-guide entry
-#                      (zero/partial ws tagging is a FAIL, not a skip)
-#    5 facet-coverage  tests/check_facet_coverage.py — worksheet facets must
-#                      all have study-guide worked examples, and a declared
-#                      "subtitle" must appear in the worksheet title block
-#                      (no-op for sheets without a facet plan)
-#    6 render-figures  scripts/render_figures.py, when shipped AND the JSON
-#                      has triangle-type or "figure" problems (else skipped)
-#    7 render-meta     scripts/render_meta.py, when shipped AND the worksheet
-#                      uses \probmeta/\probpts or every problem carries an
-#                      integer difficulty (else skipped)
-#    8 quick-answers   scripts/render_quick_answers.py regenerates the ak_'s
-#                      qa_ bank every build (skipped with --worksheet-only)
-#    9 layout-ws       tests/check_layout.py (figure scope + work space +
-#                      answer location)
-#   10 answer-line-ws  tests/check_answer_line.py (answer_unit <-> \answerline)
-#   10b answer-slots-ws tests/check_answer_slots.py — every PRINTED response
-#                      slot, and every lettered sub-part the stem asks for,
-#                      needs its own verify entry. The per-problem-id rule this
-#                      supplements counts problems, not answers; 172 of 300
-#                      reviewed cases shipped an answer nobody checked.
-#   11 compile-*       scripts/compile.sh for ws, ak, ss (ws first — it warms
-#                      the tectonic package cache for the other two). Each
-#                      compile enforces a page budget read from the engine's
-#                      own "Output written ... (N pages" log line
-#                      (check_log.py --max-pages): ss ≤ 2 (SKILL.md's hard
-#                      cap), ws ≤ 8 and ak ≤ 6 (sanity ceilings — the largest
-#                      real 12-problem worksheet ran 7 pages with figures)
-#   12 answer-key-*    tests/check_answer_key.py binds ak and ss to their JSONs
-#                      (values AND units; for ss_ also examplebox/tryitbox
-#                      pairing and role agreement)
-#   13 ss-structure    tests/check_study_guide.py — every worked example opens
-#                      with a \step strategy line before any computation
-#   14 prose-ws        tests/check_prose_consistency.py (exit 2 = parsed ZERO
-#                      problems, an unresolved \probfig/\probmeta/\probpts, a
-#                      marker-binding fault, or a hand-typed effort marker: a
-#                      structural FAIL, not a manual-review pass)
-#   15 prose-ss        the same checker on the study guide (examplebox prose
-#                      givens bound to the ss JSON; same exit-2 semantics)
-#
-# EXIT CODES: 0 all gates green · 1 a gate failed (named in the verdict line)
-#             · 2 green but manual review needed (run_verify's 2 propagates).
-
+# build.sh <verify_STEM.json> [--outdir DIR] [--worksheet-only]
+#   [--no-study-guide] [--reproduce --sources FILE] [--study-guide-only]
+# Reproduction defaults to worksheet + concise answer key; no study guide.
 set -uo pipefail
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-TESTS_DIR="$SKILL_DIR/tests"
-
-# --help prints this file's header block, so the docs above ARE the help text
-# and cannot drift from it.
-usage() { awk 'NR > 1 && !/^#/ {exit} NR > 1 {sub(/^# ?/, ""); print}' "${BASH_SOURCE[0]}"; }
-
-# ── Arguments ─────────────────────────────────────────────────────────────────
-JSON_FILE=""
-OUT_DIR="$HOME/Documents/Worksheets"
-WORKSHEET_ONLY=0
-STUDY_GUIDE_ONLY=0
+CHECKS="$SCRIPT_DIR/checks"
+JSON=""; OUT="$HOME/Documents/Worksheets"; WS_ONLY=0; NO_SS=0; SS_ONLY=0
+REPRODUCE=0; SOURCES=""
 WS_OVERRIDE=""; AK_OVERRIDE=""; SS_OVERRIDE=""; VSS_OVERRIDE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -h|--help) usage; exit 0 ;;
-    --outdir) OUT_DIR="${2:?--outdir needs a directory}"; shift 2 ;;
-    --worksheet-only) WORKSHEET_ONLY=1; shift ;;
-    --study-guide-only) STUDY_GUIDE_ONLY=1; shift ;;
-    --ws) WS_OVERRIDE="${2:?--ws needs a file}"; shift 2 ;;
-    --ak) AK_OVERRIDE="${2:?--ak needs a file}"; shift 2 ;;
-    --ss) SS_OVERRIDE="${2:?--ss needs a file}"; shift 2 ;;
-    --verify-ss) VSS_OVERRIDE="${2:?--verify-ss needs a file}"; shift 2 ;;
-    -*) echo "Error: unknown option $1 (see --help)" >&2; exit 1 ;;
-    *) JSON_FILE="$1"; shift ;;
+    -h|--help) head -4 "${BASH_SOURCE[0]}"; exit 0 ;;
+    --outdir) OUT="${2:?missing output directory}"; shift 2 ;;
+    --worksheet-only) WS_ONLY=1; NO_SS=1; shift ;;
+    --no-study-guide) NO_SS=1; shift ;;
+    --study-guide-only) SS_ONLY=1; shift ;;
+    --reproduce) REPRODUCE=1; NO_SS=1; shift ;;
+    --sources) SOURCES="${2:?missing source manifest}"; shift 2 ;;
+    --ws) WS_OVERRIDE="${2:?missing worksheet}"; shift 2 ;;
+    --ak) AK_OVERRIDE="${2:?missing answer key}"; shift 2 ;;
+    --ss) SS_OVERRIDE="${2:?missing study guide}"; shift 2 ;;
+    --verify-ss) VSS_OVERRIDE="${2:?missing guide JSON}"; shift 2 ;;
+    -*) echo "Unknown option: $1" >&2; exit 1 ;;
+    *) [[ -z "$JSON" ]] || { echo 'Only one verification JSON is allowed' >&2; exit 1; }; JSON="$1"; shift ;;
   esac
 done
-
-if [[ -z "$JSON_FILE" ]]; then usage >&2; exit 1; fi
-if [[ ! -f "$JSON_FILE" ]]; then
-  echo "Error: verification file not found: $JSON_FILE" >&2; exit 1
+[[ -f "$JSON" ]] || { echo 'Provide verify_STEM.json' >&2; exit 1; }
+[[ "$SS_ONLY" -eq 0 || "$NO_SS" -eq 0 ]] || { echo 'Conflicting output modes' >&2; exit 1; }
+[[ -z "$SOURCES" || "$REPRODUCE" -eq 1 ]] || { echo '--sources requires --reproduce' >&2; exit 1; }
+BASE="$(basename "$JSON")"; STEM="${BASE#verify_}"; STEM="${STEM%.json}"
+[[ "$BASE" == verify_*.json ]] || { echo 'Expected verify_STEM.json' >&2; exit 1; }
+DIR="$(cd "$(dirname "$JSON")" && pwd)"; JSON="$DIR/$BASE"
+if [[ "$SS_ONLY" -eq 1 ]]; then
+  [[ "$STEM" == ss_* ]] || { echo 'Guide-only expects verify_ss_STEM.json' >&2; exit 1; }
+  STEM="${STEM#ss_}"; VSS_OVERRIDE="$JSON"
+elif [[ "$STEM" == ss_* ]]; then
+  echo 'Pass worksheet JSON, or use --study-guide-only' >&2; exit 1
 fi
-
-JSON_BASE="$(basename "$JSON_FILE")"
-if [[ "$JSON_BASE" != verify_*.json ]]; then
-  echo "Error: expected a file named verify_<stem>.json, got $JSON_BASE" >&2
-  echo "(build.sh derives the ws_/ak_/ss_ document names from <stem>)" >&2
-  exit 1
-fi
-if [[ "$WORKSHEET_ONLY" -eq 1 && "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  echo "Error: --worksheet-only and --study-guide-only are mutually exclusive" >&2
-  exit 1
-fi
-STEM="${JSON_BASE#verify_}"; STEM="${STEM%.json}"
-# A guide-only request has no worksheet and therefore no verify_<stem>.json:
-# the natural invocation is on the ss JSON itself. Strip its ss_ marker so the
-# stem still names the document set, and remember the JSON we were handed IS
-# the study-guide one.
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  if [[ "$JSON_BASE" == verify_ss_*.json ]]; then
-    STEM="${STEM#ss_}"
-    VSS_OVERRIDE="${VSS_OVERRIDE:-$JSON_FILE}"
-  else
-    echo "Error: --study-guide-only expects the study-guide JSON (verify_ss_<stem>.json); got $JSON_BASE" >&2
-    exit 1
-  fi
-fi
-if [[ "$STEM" == ss_* ]]; then
-  echo "Error: $JSON_BASE is the STUDY-GUIDE verification file. Pass the" >&2
-  echo "worksheet's verify_<stem>.json — build.sh finds verify_ss_<stem>.json" >&2
-  echo "on its own." >&2
-  exit 1
-fi
-JSON_DIR="$(cd "$(dirname "$JSON_FILE")" && pwd)"
-FIGS_TEX=""
-WS_JSON="$JSON_DIR/$JSON_BASE"
-
-PYTHON3="$(command -v python3 2>/dev/null || true)"
-if [[ -z "$PYTHON3" ]]; then
-  echo "Error: python3 not found — the layout/binding checkers need it." >&2
-  exit 1
-fi
-
-# ── Result bookkeeping ────────────────────────────────────────────────────────
-# One row per gate, appended in run order; finish() marks whatever never ran.
-# Plain arrays only — macOS ships bash 3.2, no associative arrays.
-GATES=(discover template-ws template-ak template-ss verify-ws verify-ss \
-       coverage-ss facet-coverage render-figures render-meta quick-answers \
-       layout-ws answer-line-ws answer-slots-ws compile-ws compile-ak \
-       compile-ss answer-key-ak answer-key-ss ss-structure prose-ws prose-ss \
-       overprint)
-RESULTS=()
-MANUALS=0
-FAILED_GATE=""
-PDFS=()
-STEP=0
-
-record() { RESULTS+=("$1|$2"); }
-
-banner() { STEP=$((STEP + 1)); echo; echo "── step $STEP · $1"; }
-
-finish() {
-  local code="$1" row name seen g
-  for g in "${GATES[@]}"; do
-    seen=0
-    for row in "${RESULTS[@]}"; do
-      [[ "${row%%|*}" == "$g" ]] && seen=1
-    done
-    [[ "$seen" -eq 0 ]] && RESULTS+=("$g|SKIPPED(not reached)")
-  done
-  echo
-  echo "── gate summary ──────────────────────────────"
-  for row in "${RESULTS[@]}"; do
-    printf '   %-16s %s\n' "${row%%|*}" "${row#*|}"
-  done
-  if [[ ${#PDFS[@]} -gt 0 ]]; then
-    echo "── PDFs ──────────────────────────────────────"
-    printf '   %s\n' "${PDFS[@]}"
-  fi
-  echo
-  if [[ "$code" -eq 1 ]]; then
-    echo "❌ BUILD FAILED — gate: $FAILED_GATE (fix it and re-run; later gates did not run)"
-  elif [[ "$MANUALS" -gt 0 ]]; then
-    code=2
-    echo "✅ BUILD PASSED — $MANUALS verification run(s) flagged manual-review items (exit 2)"
-  else
-    echo "✅ BUILD PASSED — all gates green"
-  fi
-  exit "$code"
+source "$SCRIPT_DIR/find_python.sh"
+PY="$(find_sympy_python)" || exit 1
+export MWS_PYTHON="$PY"
+export PYTHONUTF8=1
+GATE=""; MANUAL=0; PDFS=()
+fail() { echo "BUILD FAILED — gate: $GATE" >&2; exit 1; }
+run() {
+  GATE="$1"; shift; echo "── $GATE"
+  "$@" || fail
 }
-
-fail() { # gate-name [extra teaching line]
-  FAILED_GATE="$1"
-  record "$1" "FAIL"
-  [[ $# -gt 1 ]] && echo "$2" >&2
-  finish 1
+verify() {
+  GATE="$1"; echo "── $GATE"
+  "$PY" "$SCRIPT_DIR/verify.py" "$2"; local rc=$?
+  case "$rc" in 0) ;; 2) MANUAL=1 ;; *) fail ;; esac
 }
-
-# ── Gate 0: discovery ─────────────────────────────────────────────────────────
-# Sets FOUND to the unique match for a role, or fails loudly. Tier letters sit
-# INSIDE the role token (wsS_, not S_ws_ — SKILL.md's tier naming), the
-# student-name prefix outside (leo_ws_).
-find_role() {
-  local role="$1" matches=() pat f
-  for pat in "${role}" "${role}S" "${role}C" "${role}X"; do
-    for f in "$JSON_DIR/${pat}_${STEM}.tex" "$JSON_DIR"/*"_${pat}_${STEM}.tex"; do
+discover() {
+  local role="$1" override="$2" p f matches=()
+  if [[ -n "$override" ]]; then
+    [[ -f "$override" ]] || { echo "Missing $role: $override" >&2; return 1; }
+    printf '%s\n' "$override"; return
+  fi
+  for p in "$role" "${role}S" "${role}C" "${role}X"; do
+    for f in "$DIR/${p}_${STEM}.tex" "$DIR"/*"_${p}_${STEM}.tex"; do
       [[ -f "$f" ]] && matches+=("$f")
     done
   done
-  if [[ ${#matches[@]} -gt 1 ]]; then
-    echo "Error: ambiguous ${role}_ document for stem '$STEM':" >&2
-    printf '  %s\n' "${matches[@]}" >&2
-    echo "Rename them apart (one worksheet set per stem per directory —" >&2
-    echo "tiered sheets get tier-specific stems) or pass --${role} explicitly." >&2
-    fail discover
-  fi
-  FOUND=""
-  [[ ${#matches[@]} -eq 1 ]] && FOUND="${matches[0]}"
+  [[ ${#matches[@]} -eq 1 ]] || { echo "Need exactly one ${role}_${STEM}.tex; found ${#matches[@]}" >&2; return 1; }
+  printf '%s\n' "${matches[0]}"
 }
-
-banner "discover documents for stem '$STEM' in $JSON_DIR"
-WS_TEX=""
-if [[ "$STUDY_GUIDE_ONLY" -eq 0 ]]; then
-  if [[ -n "$WS_OVERRIDE" ]]; then WS_TEX="$WS_OVERRIDE"; else find_role ws; WS_TEX="$FOUND"; fi
-  if [[ -z "$WS_TEX" || ! -f "$WS_TEX" ]]; then
-    fail discover "Error: worksheet ws_${STEM}.tex not found in $JSON_DIR (or --ws path missing)."
-  fi
+GATE=discover; WS=""; AK=""; SS=""; VSS=""
+if [[ "$SS_ONLY" -eq 0 ]]; then
+  WS="$(discover ws "$WS_OVERRIDE")" || fail
+  [[ "$WS_ONLY" -eq 1 ]] || { AK="$(discover ak "$AK_OVERRIDE")" || fail; }
 fi
-AK_TEX=""; SS_TEX=""; SS_JSON=""
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  if [[ -n "$SS_OVERRIDE" ]]; then SS_TEX="$SS_OVERRIDE"; else find_role ss; SS_TEX="$FOUND"; fi
-  if [[ -z "$SS_TEX" || ! -f "$SS_TEX" ]]; then
-    fail discover "Error: study guide ss_${STEM}.tex not found in $JSON_DIR (or --ss path missing)."
-  fi
-  SS_JSON="$VSS_OVERRIDE"
-elif [[ "$WORKSHEET_ONLY" -eq 0 ]]; then
-  if [[ -n "$AK_OVERRIDE" ]]; then AK_TEX="$AK_OVERRIDE"; else find_role ak; AK_TEX="$FOUND"; fi
-  if [[ -n "$SS_OVERRIDE" ]]; then SS_TEX="$SS_OVERRIDE"; else find_role ss; SS_TEX="$FOUND"; fi
-  # The skill mandates three documents; a missing key or study guide is a
-  # structural failure, not a skip — this is what makes the ss gate real.
-  if [[ -z "$AK_TEX" || ! -f "$AK_TEX" ]]; then
-    fail discover "Error: answer key ak_${STEM}.tex not found. The skill mandates ws+ak+ss; write it, or pass --worksheet-only to build the worksheet alone."
-  fi
-  if [[ -z "$SS_TEX" || ! -f "$SS_TEX" ]]; then
-    fail discover "Error: study guide ss_${STEM}.tex not found. The skill mandates ws+ak+ss; write it, or pass --worksheet-only to build the worksheet alone."
-  fi
-  if [[ -n "$VSS_OVERRIDE" ]]; then SS_JSON="$VSS_OVERRIDE"; else SS_JSON="$JSON_DIR/verify_ss_${STEM}.json"; fi
-  if [[ ! -f "$SS_JSON" ]]; then
-    fail discover "Error: verify_ss_${STEM}.json not found. The study guide's worked examples must be verified too (SKILL.md step 3) — write the ss verification JSON next to the ws one."
-  fi
+if [[ "$NO_SS" -eq 0 ]]; then
+  SS="$(discover ss "$SS_OVERRIDE")" || fail
+  VSS="${VSS_OVERRIDE:-$DIR/verify_ss_${STEM}.json}"
+  [[ -f "$VSS" ]] || fail
 fi
-[[ -n "$WS_TEX" ]] && echo "   ws: $WS_TEX"
-[[ -n "$AK_TEX" ]] && echo "   ak: $AK_TEX"
-[[ -n "$SS_TEX" ]] && echo "   ss: $SS_TEX  (verify: $SS_JSON)"
-record discover "PASS"
-
-# Template shells first: the cheapest check, and it teaches the shell fix
-# before any sympy verification runs — nothing downstream should ever see a
-# hand-rolled preamble (the env names every later gate binds to live in the
-# shipped template).
-template_gate() { # gate-name tex-file
-  local gate="$1" tex="$2"
-  banner "template shell on $(basename "$tex")"
-  if "$PYTHON3" "$TESTS_DIR/check_template_use.py" "$tex"; then
-    record "$gate" "PASS"
-  else
-    fail "$gate"
+PROSE_ARGS=(); LAYOUT_ARGS=(); FIGS=""; META=""
+if [[ "$REPRODUCE" -eq 1 ]]; then
+  SOURCES="${SOURCES:-$DIR/sources_${STEM}.json}"
+  run sources-ws "$PY" "$CHECKS/check_sources.py" "$WS" "$SOURCES"
+  if [[ -n "$AK" ]]; then
+    run sources-ak "$PY" "$CHECKS/check_sources.py" "$AK" "$SOURCES" --role answer-key
   fi
+  PROSE_ARGS=(--sources "$SOURCES")
+  LAYOUT_ARGS=(--sources "$SOURCES")
+  # Opaque assets are reviewed visually, never represented as CAS-verified.
+  if "$PY" -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1], encoding="utf-8")).get("assets") else 1)' "$SOURCES"; then MANUAL=1; fi
+fi
+[[ -z "$WS" ]] || run template-ws "$PY" "$CHECKS/check_template_use.py" "$WS"
+[[ -z "$AK" ]] || run template-ak "$PY" "$CHECKS/check_template_use.py" "$AK"
+[[ -z "$SS" ]] || run template-ss "$PY" "$CHECKS/check_template_use.py" "$SS"
+[[ "$SS_ONLY" -eq 1 ]] || verify verify-ws "$JSON"
+[[ -z "$VSS" ]] || verify verify-ss "$VSS"
+if [[ -n "$WS" && -n "$SS" ]]; then
+  run coverage-ss "$PY" "$CHECKS/check_ss_coverage.py" "$JSON" "$VSS"
+fi
+if [[ -n "$WS" ]]; then
+  FACETS=("$WS" "$JSON"); [[ -z "$VSS" ]] || FACETS+=("$VSS")
+  run facet-coverage "$PY" "$CHECKS/check_facet_coverage.py" "${FACETS[@]}"
+  if grep -Eq '"type"[[:space:]]*:[[:space:]]*"triangle"|"figure"[[:space:]]*:' "$JSON"; then
+    run render-figures "$PY" "$SCRIPT_DIR/render_figures.py" "$JSON"
+    FIGS="$DIR/figs_${STEM}.tex"; PROSE_ARGS+=(--figs "$FIGS"); LAYOUT_ARGS+=(--figs "$FIGS")
+  fi
+  if grep -Eq '\\probmeta\{|\\probpts\{' "$WS"; then
+    run render-meta "$PY" "$SCRIPT_DIR/render_meta.py" "$JSON"
+    META="$DIR/meta_${STEM}.tex"; PROSE_ARGS+=(--meta "$META")
+  fi
+  [[ -z "$AK" ]] || run quick-answers "$PY" "$SCRIPT_DIR/render_quick_answers.py" "$JSON" "$AK" --ws="$WS"
+  run layout-ws "$PY" "$CHECKS/check_layout.py" "$WS" "${LAYOUT_ARGS[@]}"
+  run answer-line-ws "$PY" "$CHECKS/check_answer_line.py" "$WS" "$JSON"
+  run answer-slots-ws "$PY" "$CHECKS/check_answer_slots.py" "$WS" "$JSON"
+  run prose-ws "$PY" "$CHECKS/check_prose_consistency.py" "$WS" "$JSON" "${PROSE_ARGS[@]}"
+fi
+if [[ -n "$AK" ]]; then
+  run answer-key-ak "$PY" "$CHECKS/check_answer_key.py" "$AK" "$JSON"
+fi
+if [[ -n "$SS" ]]; then
+  run answer-key-ss "$PY" "$CHECKS/check_answer_key.py" "$SS" "$VSS"
+  run ss-structure "$PY" "$CHECKS/check_study_guide.py" "$SS" "$VSS"
+  run prose-ss "$PY" "$CHECKS/check_prose_consistency.py" "$SS" "$VSS"
+fi
+compile() {
+  local role="$1" tex="$2" cap="$3"
+  run "compile-$role" env MAX_PAGES="$cap" bash "$SCRIPT_DIR/compile.sh" "$tex" "$OUT"
+  PDFS+=("$OUT/$(basename "${tex%.tex}").pdf")
 }
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  record template-ws "SKIPPED(--study-guide-only)"
-  record template-ak "SKIPPED(--study-guide-only)"
-  template_gate template-ss "$SS_TEX"
-elif [[ "$WORKSHEET_ONLY" -eq 1 ]]; then
-  template_gate template-ws "$WS_TEX"
-  record template-ak "SKIPPED(--worksheet-only)"
-  record template-ss "SKIPPED(--worksheet-only)"
-else
-  template_gate template-ws "$WS_TEX"
-  template_gate template-ak "$AK_TEX"
-  template_gate template-ss "$SS_TEX"
+if [[ -n "$WS" ]]; then
+  GATE=page-budget-ws
+  CAP="$("$PY" "$SCRIPT_DIR/page_budget.py" "$JSON" --from-tex "$WS" --max-pages)" || fail
+  compile ws "$WS" "$CAP"
 fi
-
-# run_verify.sh exit semantics: 0 pass · 1 fail · 2 manual-review-but-safe.
-run_verify_gate() { # gate-name json-file
-  local gate="$1" json="$2" rc
-  bash "$SCRIPT_DIR/run_verify.sh" "$json"
-  rc=$?
-  case "$rc" in
-    0) record "$gate" "PASS" ;;
-    2) record "$gate" "MANUAL"; MANUALS=$((MANUALS + 1)) ;;
-    *) fail "$gate" ;;
-  esac
-}
-
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  record verify-ws "SKIPPED(--study-guide-only)"
-else
-  banner "verify worksheet JSON ($JSON_BASE)"
-  run_verify_gate verify-ws "$WS_JSON"
+if [[ -n "$AK" ]]; then
+  GATE=page-budget-ak
+  CAP="$("$PY" "$SCRIPT_DIR/page_budget.py" "$JSON" --doc ak --from-tex "$AK" --max-pages)" || fail
+  compile ak "$AK" "$CAP"
 fi
-
-if [[ "$WORKSHEET_ONLY" -eq 1 ]]; then
-  record verify-ss "SKIPPED(--worksheet-only)"
-else
-  banner "verify study-guide JSON ($(basename "$SS_JSON"))"
-  run_verify_gate verify-ss "$SS_JSON"
+if [[ -n "$SS" ]]; then
+  CAP="$("$PY" -c 'import json,sys; print(json.load(open(sys.argv[1],encoding="utf-8")).get("pages",2))' "$VSS")" || fail
+  compile ss "$SS" "$CAP"
 fi
-
-# Skill coverage runs BEFORE anything renders or compiles: an uncovered skill
-# means the study guide must gain a section, so later gates would be wasted.
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  # There is no worksheet whose skills the guide must cover; coverage is the
-  # one obligation that is RELATIVE to a sheet. The guide's own integrity
-  # gates (verify-ss, answer-key-ss, ss-structure, prose-ss) all still run.
-  record coverage-ss "SKIPPED(--study-guide-only)"
-elif [[ "$WORKSHEET_ONLY" -eq 1 ]]; then
-  record coverage-ss "SKIPPED(--worksheet-only)"
-else
-  banner "skill coverage: $JSON_BASE → $(basename "$SS_JSON")"
-  if "$PYTHON3" "$TESTS_DIR/check_ss_coverage.py" "$WS_JSON" "$SS_JSON"; then
-    record coverage-ss "PASS"
-  else
-    fail coverage-ss
-  fi
+run overprint "$PY" "$CHECKS/check_overprint.py" --quiet "${PDFS[@]}"
+printf 'PDF: %s\n' "${PDFS[@]}"
+if [[ "$MANUAL" -eq 1 ]]; then
+  echo 'BUILD PASSED — manual review items / visually reviewed external assets (exit 2)'; exit 2
 fi
-
-# Cross-file facet gates likewise run BEFORE any compile: they read only JSON
-# + tex text, so a facet or subtitle drift is caught in milliseconds, not
-# after three tectonic runs.
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  record facet-coverage "SKIPPED(--study-guide-only)"
-else
-  banner "facet coverage (ws facets ⊆ ss examples; subtitle binding)"
-  if [[ "$WORKSHEET_ONLY" -eq 1 ]]; then
-    FACET_ARGS=("$WS_TEX" "$WS_JSON")
-  else
-    FACET_ARGS=("$WS_TEX" "$WS_JSON" "$SS_JSON")
-  fi
-  if "$PYTHON3" "$TESTS_DIR/check_facet_coverage.py" "${FACET_ARGS[@]}"; then
-    record facet-coverage "PASS"
-  else
-    fail facet-coverage
-  fi
-fi
-
-# One python-resolution path for every render gate that needs sympy
-# (render-figures imports verify.py's solver; quick-answers typesets symbolic
-# answers via sympify). Resolved ONCE; empty means no sympy python exists —
-# the first gate that needs it fails, and the finder has already printed its
-# teaching message.
-source "$SCRIPT_DIR/find_python.sh"
-SYMPY_PY="$(find_sympy_python)" || SYMPY_PY=""
-
-banner "render figures"
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  record render-figures "SKIPPED(--study-guide-only)"
-elif [[ ! -f "$SCRIPT_DIR/render_figures.py" ]]; then
-  # Defensive: the renderer ships separately; its absence is not a fault.
-  echo "   render_figures.py not shipped — skipping."
-  record render-figures "SKIPPED(renderer not shipped)"
-elif ! grep -Eq '"type"[[:space:]]*:[[:space:]]*"triangle"|"figure"[[:space:]]*:' "$WS_JSON"; then
-  echo "   no triangle-type or \"figure\" problems in the JSON — skipping."
-  record render-figures "SKIPPED(no figure problems)"
-elif [[ -z "$SYMPY_PY" ]]; then
-  fail render-figures
-else
-  if "$SYMPY_PY" "$SCRIPT_DIR/render_figures.py" "$WS_JSON"; then
-    record render-figures "PASS"
-    FIGS_TEX="$(dirname "$WS_JSON")/figs_${STEM}.tex"
-    [[ -f "$FIGS_TEX" ]] || FIGS_TEX=""
-  else
-    fail render-figures
-  fi
-fi
-
-banner "render effort markers (difficulty -> \\probmeta/\\probpts)"
-META_TEX=""
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  record render-meta "SKIPPED(--study-guide-only)"
-elif [[ ! -f "$SCRIPT_DIR/render_meta.py" ]]; then
-  echo "   render_meta.py not shipped — skipping."
-  record render-meta "SKIPPED(renderer not shipped)"
-else
-  # Run when the sheet already calls markers, or when every problem carries a
-  # legal difficulty tag (bash never parses JSON — python answers that).
-  WANT_META="no"
-  grep -Eq '\\probmeta\{|\\probpts\{' "$WS_TEX" && WANT_META="yes"
-  if [[ "$WANT_META" == "no" ]]; then
-    WANT_META="$("$PYTHON3" -c 'import json, sys
-ps = json.load(open(sys.argv[1])).get("problems", [])
-ok = bool(ps) and all(isinstance(p, dict)
-                      and isinstance(p.get("difficulty"), int)
-                      and not isinstance(p.get("difficulty"), bool)
-                      and 1 <= p["difficulty"] <= 5 for p in ps)
-print("yes" if ok else "no")' "$WS_JSON" 2>/dev/null || echo no)"
-  fi
-  if [[ "$WANT_META" == "yes" ]]; then
-    # stdlib-only renderer: plain python3 is enough (no sympy for integers)
-    if "$PYTHON3" "$SCRIPT_DIR/render_meta.py" "$WS_JSON"; then
-      record render-meta "PASS"
-      META_TEX="$(dirname "$WS_JSON")/meta_${STEM}.tex"
-      [[ -f "$META_TEX" ]] || META_TEX=""
-    else
-      fail render-meta
-    fi
-  else
-    echo "   no marker calls and no complete difficulty tagging — skipping."
-    record render-meta "SKIPPED(no difficulty tags)"
-  fi
-fi
-
-banner "quick-answer bank for the answer key"
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  record quick-answers "SKIPPED(--study-guide-only)"
-elif [[ "$WORKSHEET_ONLY" -eq 1 ]]; then
-  record quick-answers "SKIPPED(--worksheet-only)"
-elif [[ ! -f "$SCRIPT_DIR/render_quick_answers.py" ]]; then
-  echo "   render_quick_answers.py not shipped — skipping."
-  record quick-answers "SKIPPED(renderer not shipped)"
-elif [[ -z "$SYMPY_PY" ]]; then
-  fail quick-answers
-else
-  # Regenerated EVERY build (the render-figures pattern): the gated path can
-  # never serve a stale bank, so no staleness lint exists to drift. The
-  # generator also preflights the ak_ source — a generated bank the key never
-  # \inputs, or a hand-rolled preamble, is a loud teaching failure here.
-  # --ws lets the bank report which printed responses NOTHING verifies. Without
-  # it the key still renders, it just cannot tell the instructor what is
-  # unchecked — so pass it whenever the worksheet source is known.
-  if "$SYMPY_PY" "$SCRIPT_DIR/render_quick_answers.py" "$WS_JSON" "$AK_TEX" \
-       ${WS_TEX:+--ws="$WS_TEX"}; then
-    record quick-answers "PASS"
-  else
-    fail quick-answers
-  fi
-fi
-
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  record layout-ws "SKIPPED(--study-guide-only)"
-  record answer-line-ws "SKIPPED(--study-guide-only)"
-  record answer-slots-ws "SKIPPED(--study-guide-only)"
-else
-  banner "layout check (figure scope + work space + answer location) on $(basename "$WS_TEX")"
-  if "$PYTHON3" "$TESTS_DIR/check_layout.py" "$WS_TEX" ${FIGS_TEX:+--figs "$FIGS_TEX"}; then
-    record layout-ws "PASS"
-  else
-    fail layout-ws
-  fi
-
-  banner "answer-line binding (answer_unit) on $(basename "$WS_TEX")"
-  if "$PYTHON3" "$TESTS_DIR/check_answer_line.py" "$WS_TEX" "$WS_JSON"; then
-    record answer-line-ws "PASS"
-  else
-    fail answer-line-ws
-  fi
-
-  banner "answer-slot coverage on $(basename "$WS_TEX")"
-  if "$PYTHON3" "$TESTS_DIR/check_answer_slots.py" "$WS_TEX" "$WS_JSON"; then
-    record answer-slots-ws "PASS"
-  else
-    fail answer-slots-ws
-  fi
-fi
-
-# Compile ws first: the first tectonic run downloads packages into the shared
-# cache, so the ak/ss compiles that follow are fast.
-#
-# Page budgets, passed to compile.sh as MAX_PAGES (checked by check_log.py
-# against the log's "Output written ... (N pages" line — the engine's own
-# count, both engines print it). ss: SKILL.md hard-caps the study guide at
-# 2 pages; a documented cap with no check once let a 3-page guide ship green.
-# ws/ak have no pedagogical cap, so these are sanity ceilings sized from the
-# real artifacts (the largest real 12-problem worksheet was 7 pages with
-# figures): a 10-page worksheet is a layout accident, not a worksheet.
-# ws/ak budgets are COMPUTED from the problem set (scripts/page_budget.py), not
-# fixed: 50 graphing problems that each need a coordinate plane legitimately run
-# past 20 pages, and a flat cap could only be satisfied by shrinking the work
-# space — the one thing that must never give. The budget moves with the content;
-# what the cap still catches is a page count far above what the content asks
-# for, which is paper spent on a layout accident. The compression direction is
-# gated per problem by check_layout.py's work-space floor, which is the better
-# place for it: it is a property of the problem, not of the aggregate.
-# ss keeps a fixed 2 pages: it is a reference card, and SKILL.md caps it there.
-# The budget is calibrated at 12pt, so it must be told when the document is not.
-# SKILL.md offers 14pt/17pt large-print and dyslexia-friendly output and said the
-# budget adapted automatically; it did not, and a correct 17pt sheet failed this
-# gate by a page. --from-tex reads the point size and \accessiblemode off the
-# worksheet itself, so nothing depends on an author remembering a flag.
-if [[ "$STUDY_GUIDE_ONLY" -eq 0 ]]; then
-  WS_MAX_PAGES=$("$PYTHON3" "$SCRIPT_DIR/page_budget.py" "$WS_JSON" --from-tex "$WS_TEX" --max-pages 2>/dev/null || echo 8)
-  AK_MAX_PAGES=$("$PYTHON3" "$SCRIPT_DIR/page_budget.py" "$WS_JSON" --doc ak --from-tex "$AK_TEX" --max-pages 2>/dev/null || echo 6)
-fi
-# The study-guide cap DEFAULTS to 2 pages — it is a reference card, and the
-# discipline of the small page is most of what makes it one. It is no longer a
-# constant: a guide whose skills genuinely need room for diagrams (a unit
-# circle, a transformation grid, a labelled solid) declares a top-level
-# "pages" in its verify_ss JSON, and a user asking for a longer guide gets one
-# the same way. Clamped to 1..6: past six it is not a reference card any more,
-# it is a textbook chapter, and splitting by topic serves the student better.
-# The declaration lives in the JSON rather than a flag so the ARTIFACT records
-# its own budget — the same reasoning as workspace_cm on the worksheet.
-SS_MAX_PAGES=2
-if [[ -n "$SS_JSON" && -f "$SS_JSON" ]]; then
-  SS_MAX_PAGES=$("$PYTHON3" -c '
-import json, sys
-try:
-    print(max(1, min(6, int(json.load(open(sys.argv[1])).get("pages", 2)))))
-except Exception:
-    print(2)' "$SS_JSON" 2>/dev/null || echo 2)
-fi
-[[ "$STUDY_GUIDE_ONLY" -eq 0 ]] && \
-  "$PYTHON3" "$SCRIPT_DIR/page_budget.py" "$WS_JSON" --from-tex "$WS_TEX" 2>/dev/null || true
-compile_gate() { # gate-name tex-file max-pages
-  local gate="$1" tex="$2" cap="$3"
-  banner "compile $(basename "$tex") → $OUT_DIR  (page budget: $cap)"
-  if MAX_PAGES="$cap" bash "$SCRIPT_DIR/compile.sh" "$tex" "$OUT_DIR"; then
-    record "$gate" "PASS"
-    PDFS+=("$OUT_DIR/$(basename "${tex%.tex}").pdf")
-  else
-    fail "$gate"
-  fi
-}
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  record compile-ws "SKIPPED(--study-guide-only)"
-  record compile-ak "SKIPPED(--study-guide-only)"
-  compile_gate compile-ss "$SS_TEX" "$SS_MAX_PAGES"
-else
-  compile_gate compile-ws "$WS_TEX" "$WS_MAX_PAGES"
-  if [[ "$WORKSHEET_ONLY" -eq 1 ]]; then
-    record compile-ak "SKIPPED(--worksheet-only)"
-    record compile-ss "SKIPPED(--worksheet-only)"
-  else
-    compile_gate compile-ak "$AK_TEX" "$AK_MAX_PAGES"
-    compile_gate compile-ss "$SS_TEX" "$SS_MAX_PAGES"
-  fi
-fi
-
-if [[ "$WORKSHEET_ONLY" -eq 1 ]]; then
-  record answer-key-ak "SKIPPED(--worksheet-only)"
-  record answer-key-ss "SKIPPED(--worksheet-only)"
-  record ss-structure "SKIPPED(--worksheet-only)"
-else
-  if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-    record answer-key-ak "SKIPPED(--study-guide-only)"
-  else
-    banner "answer-key binding: $(basename "$AK_TEX") ↔ $JSON_BASE"
-    if "$PYTHON3" "$TESTS_DIR/check_answer_key.py" "$AK_TEX" "$WS_JSON"; then
-      record answer-key-ak "PASS"
-    else
-      fail answer-key-ak
-    fi
-  fi
-  banner "answer-key binding: $(basename "$SS_TEX") ↔ $(basename "$SS_JSON")"
-  if "$PYTHON3" "$TESTS_DIR/check_answer_key.py" "$SS_TEX" "$SS_JSON"; then
-    record answer-key-ss "PASS"
-  else
-    fail answer-key-ss
-  fi
-  banner "study-guide structure (strategy steps) on $(basename "$SS_TEX")"
-  if "$PYTHON3" "$TESTS_DIR/check_study_guide.py" "$SS_TEX" "$SS_JSON"; then
-    record ss-structure "PASS"
-  else
-    fail ss-structure
-  fi
-fi
-
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  record prose-ws "SKIPPED(--study-guide-only)"
-  rc=0
-else
-banner "prose consistency on $(basename "$WS_TEX")"
-"$PYTHON3" "$TESTS_DIR/check_prose_consistency.py" "$WS_TEX" "$WS_JSON" \
-  ${FIGS_TEX:+--figs "$FIGS_TEX"} ${META_TEX:+--meta "$META_TEX"}
-rc=$?
-fi
-if [[ "$STUDY_GUIDE_ONLY" -eq 1 ]]; then
-  : # recorded above
-elif [[ "$rc" -eq 0 ]]; then
-  record prose-ws "PASS"
-elif [[ "$rc" -eq 2 ]]; then
-  # NOT a manual-review pass: exit 2 here is structural — the checker parsed
-  # ZERO problem blocks, hit an unresolved/mis-indexed \probfig or
-  # \probmeta/\probpts marker (re-run scripts/render_figures.py /
-  # scripts/render_meta.py after JSON edits), or found a hand-typed effort
-  # marker. The checker's own output names the specific fault and fix.
-  fail prose-ws "Error: check_prose_consistency stopped on a structural fault — see its output above (zero parsed problems, an unresolved \\probfig/\\probmeta/\\probpts, a marker-binding fault, or a hand-typed effort marker)."
-else
-  fail prose-ws
-fi
-
-# Study-guide prose binding: the ss is the one document the student learns
-# from FIRST and has no answer key to cross-check against — a drifted prose
-# given beside a correct expr is invisible to every other gate. Runs after
-# answer-key-ss (which hard-fails on box-count != problem_count), so the
-# order-based example↔entry mapping is sound whenever this runs. No --figs:
-# ss documents carry no \probfig, and if one ever appears the unresolved-
-# probfig branch exits 2 loudly, which is correct.
-if [[ "$WORKSHEET_ONLY" -eq 1 ]]; then
-  record prose-ss "SKIPPED(--worksheet-only)"
-else
-  banner "prose consistency on $(basename "$SS_TEX")"
-  "$PYTHON3" "$TESTS_DIR/check_prose_consistency.py" "$SS_TEX" "$SS_JSON"
-  rc=$?
-  if [[ "$rc" -eq 0 ]]; then
-    record prose-ss "PASS"
-  elif [[ "$rc" -eq 2 ]]; then
-    fail prose-ss "Error: check_prose_consistency parsed no worked examples — the study guide must keep one worked example per examplebox (SKILL.md: box count = problem_count). Nothing was checked, so this is a structural failure."
-  else
-    fail prose-ss
-  fi
-fi
-
-# ── overprinting ────────────────────────────────────────────────────────────
-# Every gate above reads the SOURCE or the engine's LOG, and both are blind to
-# two things drawn in the same place: TeX has not overrun a line and has not run
-# out of room, so it says nothing at all. Three such faults shipped in one eval
-# run with clean logs — a running head through the Name/Date blanks, and figure
-# captions overprinting after an xshift was scaled along with its tikzpicture.
-# This reads where the words actually landed in the finished PDF, so it runs
-# last: it needs the documents the earlier gates just produced.
-banner "overprinting in the compiled PDFs"
-if [[ ${#PDFS[@]} -eq 0 ]]; then
-  record overprint "SKIPPED(nothing compiled)"
-elif "$PYTHON3" "$TESTS_DIR/check_overprint.py" --quiet "${PDFS[@]}"; then
-  record overprint "PASS"
-else
-  fail overprint "Text is printed over other text. The engine reports none of this — open the named page, find the two things at that coordinate, and separate them."
-fi
-
-finish 0
+echo 'BUILD PASSED — all gates green'

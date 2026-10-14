@@ -1,8 +1,0 @@
-{
-  "topic": "coverage-gap fixture — 3 problems declared, id 2 unverified — must exit 1",
-  "problem_count": 3,
-  "problems": [
-    {"id": 1, "type": "solve", "expr": "x - 1", "expected": [1]},
-    {"id": 3, "type": "solve", "expr": "x - 3", "expected": [3]}
-  ]
-}

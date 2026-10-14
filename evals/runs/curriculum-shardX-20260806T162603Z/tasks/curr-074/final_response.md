@@ -1,9 +1,0 @@
-# Division: Group Size or Group Count? (Grades 2–3)
-
-Three PDFs are ready:
-
-- **Worksheet** (`ws_divgroups_curr074.pdf`) — 8 problems built around one specific confusion: whether a division answer counts *how many groups* or *how many in each group*. Problems 1–3 and 5 are sharing/grouping practice whose numbers were chosen so repeating a given (e.g. answering "3 bags" instead of "4 cookies each") lands visibly off the correct answer. Problems 4 and 7 are the find-and-fix items — Jo repeats the box count as her answer, and Ben divides correctly but gives the quotient the wrong meaning. Problem 6 asks your child to name what their own answer counts, and the challenge (8) asks for two stories for 24 ÷ 4, one of each meaning.
-- **Answer key** (`ak_divgroups_curr074.pdf`) — full reasoning per problem including what each explanation must contain, a quick-answers bank with slot labels, a Curriculum section (3.OA.A.2/3, difficulty 1–4), and a common-wrong-answers block generated from the 5 declared traps.
-- **Study guide** (`ss_divgroups_curr074.pdf`) — 2 pages: sharing equally (find the size), making groups (find the count), and checking what your answer counts, each with rule box, worked example, and try-it.
-
-**What is verified:** 8 of the 13 graded responses are machine-checked with SymPy — every numeric answer on all 8 problems. The 5 open responses (the two find-and-fix diagnoses, what-the-answer-counts in problem 6, and the two written stories in the challenge) are instructor-judged; the quick-answers bank marks them `---` and the key states the criteria for each. All 5 declared misconception traps (repeating the given group number as the answer) were machine-proven distinguishably wrong. Note that on problem 7 the planted misconception changes the *meaning* rather than the number, so it is graded by the rubric, not a trap — the trap mechanism only covers value-changing errors.

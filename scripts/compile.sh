@@ -31,7 +31,7 @@ scan_log() {
     return 0
   fi
   local PY
-  PY="$(command -v python3 2>/dev/null || true)"
+  PY="${MWS_PYTHON:-$(command -v python3 2>/dev/null || true)}"
   if [[ -z "$PY" ]]; then
     echo "⚠ python3 not found — log hygiene not checked (install python3;" >&2
     echo "  it is already required for answer verification, see SKILL.md)" >&2

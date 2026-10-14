@@ -1,9 +1,0 @@
-% Known-bad sheet: itemsep=3cm looks generous, but \vspace{-2.9cm} claws it
-% back to ~0.1cm of actual room. An unsigned \vspace regex cannot see the
-% minus sign, so this sheet used to pass "work space ok". It must fail.
-\documentclass{article}\usepackage{enumitem}\begin{document}
-\begin{enumerate}[leftmargin=*, itemsep=3cm]
-  \item $3x + 7 = 22$ \vspace{-2.9cm}
-  \item $-2(x - 5) = 14$ \vspace{-2.9cm}
-  \item $\dfrac{x}{4} + 3 = 9$ \vspace{-2.9cm}
-\end{enumerate}\end{document}

@@ -392,7 +392,7 @@ def slot_gap(ws_tex, n, by_id):
     """
     try:
         sys.path.insert(0, os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tests"))
+            os.path.dirname(os.path.abspath(__file__)), "checks"))
         from check_answer_slots import (blank_comments, segment_spans,
                                         shortfall)
     except ImportError:

@@ -1,9 +1,0 @@
-{
-  "topic": "injection attempt fixture — must exit 1 and never execute code",
-  "problems": [
-    {"id": 1, "type": "eval", "expr": "__import__('os').system('echo PWNED-MARKER')", "at": {"x": 0}, "expected": 0},
-    {"id": 2, "type": "solve", "expr": "x.__class__", "expected": [0]},
-    {"id": 3, "type": "equiv", "expr": "open('/etc/passwd')", "expected": "1"},
-    {"id": 4, "type": "solve", "expr": "Symbol('x')", "expected": [0]}
-  ]
-}

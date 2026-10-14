@@ -173,7 +173,7 @@ still check — never let the wrapper cost you the verification.
 | Trig / Pre-Calc | angle of elevation, surveying, bearings, two ships/planes | `triangle` / `approx` |
 | Calculus | related rates (cone, ladder, shadow), optimization (min fence, max box), motion from v(t) | `diff` + `approx` |
 
-Use `tests/check_prose_consistency.py <worksheet.tex> <verify.json>` after
+Use `scripts/checks/check_prose_consistency.py <worksheet.tex> <verify.json>` after
 writing both files — it flags prose numbers that never appear in the JSON givens.
 
 ## Verification recipes
@@ -234,7 +234,7 @@ Choose givens so the canonical wrong method produces a **visibly wrong
 answer** — a problem whose givens make the misconception land on the correct
 value (a=b in a ratio-swap problem) is blind to the very error it should
 catch. Declare each designed-for error as a `"traps"` entry and verify.py
-proves it distinguishable (see SKILL.md step 4 for the field).
+proves it distinguishable (see authoring.md step 4 for the field).
 
 Top misconceptions by family — use the trap-expr recipe as the wrong-method
 arithmetic:
@@ -320,7 +320,7 @@ student to choose between.
 | `pythagorean` | third side from two sides |
 | `elevation` | angle-of-elevation application |
 | `depression` | angle-of-depression application |
-| `write-the-ratio` | state the ratio (no solving) — tag standard HSG-SRT.C.6; verify as `eval` (`"expr": "a/b"` with the sides in `at`) and attach the renderer `"figure"` object — the triangle it reads from is renderer-figured, never hand-drawn (SKILL.md step 4b) |
+| `write-the-ratio` | state the ratio (no solving) — tag standard HSG-SRT.C.6; verify as `eval` (`"expr": "a/b"` with the sides in `at`) and attach the renderer `"figure"` object — the triangle it reads from is renderer-figured, never hand-drawn (authoring.md step 4b) |
 
 **Factoring quadratics**
 

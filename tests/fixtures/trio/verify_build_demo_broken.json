@@ -1,8 +1,0 @@
-{
-  "topic": "build.sh driver fixture — WRONG expected value: verify must exit 1 and build.sh must stop before any compile",
-  "problem_count": 2,
-  "problems": [
-    {"id": 1, "type": "approx", "expr": "9*tan(35*pi/180)", "expected": 9.99, "tol": 0.01},
-    {"id": 2, "type": "solve", "expr": "x**2 - 5*x + 6", "expected": [2, 3]}
-  ]
-}

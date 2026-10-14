@@ -1,9 +1,0 @@
-{
-  "topic": "Answer-key binding fixtures",
-  "problem_count": 3,
-  "problems": [
-    {"id": 1, "type": "solve", "expr": "2*x - 14", "expected": [7]},
-    {"id": 2, "type": "approx", "expr": "9.02/2", "expected": 4.51},
-    {"id": 3, "type": "solve", "expr": "3*x - 15", "expected": [5]}
-  ]
-}

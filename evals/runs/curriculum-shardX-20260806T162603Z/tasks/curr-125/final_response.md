@@ -1,7 +1,0 @@
-Here are the three PDFs for the ordering-fractions worksheet (Grades 4–5):
-
-- **Worksheet** (`ws_fracorder_curr125.pdf`) — 12 problems in an interleaved synthesis format on ordering fractions and mixed numbers across representations. After a short warm-up, the three subskills (benchmark ordering, common-denominator ordering, and mixed-number/improper conversions) rotate so your child must choose the tool each time. It includes a number-line placement, a trail-lengths application, an error-analysis item about comparing 2 1/4 with 9/4, and a synthesis challenge with three ribbons where two lengths tie.
-- **Answer key** (`ak_fracorder_curr125.pdf`) — quick-answers bank plus step-by-step solutions naming which tool each problem uses, with every ordered value and comparison symbol boxed.
-- **Study guide** (`ss_fracorder_curr125.pdf`) — a reference card teaching the three subskills, each with a rule box, worked example, and try-it, plus a watch-out about comparing a mixed number and an improper fraction by their front numbers.
-
-**What is verified:** 24 of the 26 printed responses are machine-checked with SymPy — every ordering, comparison symbol, and conversion, including the planted misconception items. Two responses are instructor-judged: the explanation of Ben's mistake in problem 9(c) and the tie explanation in problem 12(c); for both the answer key states what a correct response must contain. All 8 study-guide entries are machine-verified. The full gate chain passed (exit 2 = green with those manual-review items).

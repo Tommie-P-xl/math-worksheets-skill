@@ -1,9 +1,0 @@
-{
-  "topic": "Answer-key binding — multi-part problem with a nested parts list",
-  "problem_count": 2,
-  "problems": [
-    {"id": 1, "type": "solve", "expr": "x - 3", "expected": [3]},
-    {"id": 1, "type": "solve", "expr": "x - 8", "expected": [8]},
-    {"id": 2, "type": "solve", "expr": "x - 10", "expected": [10]}
-  ]
-}

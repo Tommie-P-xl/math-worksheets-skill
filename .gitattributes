@@ -1,19 +1,7 @@
-# What a DOWNLOAD contains, versus what a CLONE contains.
-#
-# The eval system and its retained runs are this project's evidence — 9,699
-# files and ~26 MB of a 28 MB checkout — and they are provenance, not product.
-# A user downloading the skill wants SKILL.md, scripts/, templates/,
-# references/, and the tests that let them prove their install works. They do
-# not want three judged eval runs and a calibration corpus.
-#
-# export-ignore removes these paths from `git archive` output, which is what
-# GitHub serves for "Download ZIP" and for release source tarballs. Clones are
-# untouched: the full history, runs, verdicts and analyses stay in the repo,
-# because the README's claims cite them and a claim whose evidence is
-# unfetchable is an assertion.
-#
-# Measured after this file: `git archive` drops from 286 MB / 10,610 files
-# to 2.3 MB / 234 files.
-evals/           export-ignore
-.github/         export-ignore
-.gitattributes   export-ignore
+* text=auto eol=lf
+*.png binary
+*.pdf binary
+.github/ export-ignore
+tools/ export-ignore
+tests/ export-ignore
+.gitattributes export-ignore

@@ -1,7 +1,0 @@
-{
-  "schema_version":"1.0","task_id":"curr-384","judge":{"type":"independent_codex_judge","id":"gpt-5.6","agent":"codex","model":"gpt-5.6","completed_at":"2026-08-04T00:30:00Z"},"verdict":"ACCEPT","hard_failures":[],
-  "dimension_scores":{"curriculum_alignment":4,"problem_set_design":4,"mathematical_correctness":4,"answer_key_quality":4,"study_guide_quality":4,"clarity_and_accessibility":4,"visual_and_print_quality":4,"instruction_following":4},"total_score":32,"manual_items_reviewed":1,"incorrect_or_ambiguous_items":[],"errors":[],
-  "critical_observations":["Visually confirmed exactly 8 problems despite extraction noise and recomputed all compositions and inverse values.","Manually reviewed the two-sided inverse-domain explanation; it correctly identifies absolute value and range restrictions and proves the unrestricted square is not one-to-one."],
-  "artifact_findings":["Composition order and inverse domains are repeatedly made explicit, with valid counterchecks in both directions."],
-  "rationale":"Excellent misconception analysis of composition order and inverse domains, with correct algebra and rigorous domain reasoning."
-}

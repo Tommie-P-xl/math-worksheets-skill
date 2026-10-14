@@ -1,71 +1,44 @@
 name: release
-
-# Publish a tag + GitHub Release from inside Actions.
-#
-# Why this exists: the automation that maintains this repo pushes over a
-# credential scoped to its working branch — it can open and merge PRs, but the
-# proxy refuses any refs/tags/* push. Actions' own GITHUB_TOKEN has no such
-# scope cut, so tagging is done HERE, where it is also auditable: every
-# release is a logged workflow run naming who dispatched it.
-#
-# Deliberately manual (workflow_dispatch, never on push): a release is a human
-# decision. The release body comes from docs/RELEASE_NOTES_<tag>.md when that
-# file exists — written and reviewed in the same PR as the code it describes —
-# with the tag's own message as fallback.
-
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to create and release, e.g. v3.6.0"
+        description: Existing tag to publish (must match SKILL.md version)
         required: true
         type: string
-
 permissions:
   contents: write
-
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  publish:
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-
-      - name: Create the tag at this ref (skip if it already exists)
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate tag and package
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          TAG="${{ inputs.tag }}"
-          case "$TAG" in
-            v[0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "::error::tag '$TAG' does not look like vX.Y.Z"; exit 1 ;;
-          esac
-          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-            echo "tag $TAG already exists at $(git rev-parse "$TAG"^{commit}) — reusing it"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag -a "$TAG" -m "$TAG (released via the release workflow)"
-            git push origin "refs/tags/$TAG"
-          fi
-
-      - name: Create the GitHub Release
+          python -c 'import os,re,pathlib; v=re.search(r"^  version: ([0-9.]+)$",pathlib.Path("SKILL.md").read_text(),re.M).group(1); assert os.environ["RELEASE_TAG"] == "v"+v, "tag/version mismatch"'
+          python tools/package_skill.py
+      - name: Install validation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-pictures texlive-fonts-recommended poppler-utils
+          python -m pip install sympy==1.14.0
+      - name: Validate runtime and extracted package
+        run: python -m unittest discover -s tests -v
+      - name: Publish ZIP and checksum
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          TAG="${{ inputs.tag }}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "release $TAG already exists — nothing to do"
-            exit 0
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --notes-file RELEASE_NOTES.md
           fi
-          NOTES="docs/RELEASE_NOTES_${TAG}.md"
-          if [ -f "$NOTES" ]; then
-            # Drop the how-to-cut-this-release preamble (the leading
-            # blockquote) — it is instructions for the releaser, not notes
-            # for the reader.
-            awk 'BEGIN{skip=0} NR==1{print; next} /^> /{skip=1; next} skip && /^$/{skip=0; next} !skip{print}' \
-              "$NOTES" > /tmp/notes.md
-            gh release create "$TAG" --title "$TAG" --notes-file /tmp/notes.md
-          else
-            gh release create "$TAG" --title "$TAG" --generate-notes
-          fi
-          echo "released $TAG" >> "$GITHUB_STEP_SUMMARY"
+          gh release upload "$RELEASE_TAG" dist/*.zip dist/*.sha256 --clobber

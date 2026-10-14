@@ -1,9 +1,0 @@
-{
-  "topic": "statistics and probability — wrong answers must exit 1",
-  "problem_count": 3,
-  "problems": [
-    {"id": 1, "type": "stats", "data": [4, 8, 6, 2, 5], "measure": "mean", "expected": 6},
-    {"id": 2, "type": "stats", "data": [10, 4, 15, 6], "measure": "range", "expected": 15},
-    {"id": 3, "type": "probability", "favorable": 3, "total": 6, "expected": "1/3"}
-  ]
-}

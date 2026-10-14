@@ -1,7 +1,0 @@
-{
-  "schema_version":"1.0","task_id":"curr-195","judge":{"type":"independent_codex_judge","id":"gpt-5.6","agent":"codex","model":"gpt-5.6","completed_at":"2026-08-04T00:10:00Z"},"verdict":"ACCEPT","hard_failures":[],
-  "dimension_scores":{"curriculum_alignment":4,"problem_set_design":4,"mathematical_correctness":4,"answer_key_quality":4,"study_guide_quality":4,"clarity_and_accessibility":4,"visual_and_print_quality":4,"instruction_following":4},"total_score":32,"manual_items_reviewed":1,"incorrect_or_ambiguous_items":[],"errors":[],
-  "critical_observations":["Recomputed all 12 surface areas, scale-factor applications, composite areas, and design values.","Manually reviewed the equal-volume box design decision; Box A correctly uses less cardboard than Box B, with valid practical caveats."],
-  "artifact_findings":["Dimensions and diagrams are clear, and the key avoids double-counting hidden joined faces."],
-  "rationale":"An excellent multistep geometry-design packet with correct scaling, surface-area structure, and thoughtful manual design reasoning."
-}

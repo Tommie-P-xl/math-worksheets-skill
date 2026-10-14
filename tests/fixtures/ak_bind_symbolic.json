@@ -1,7 +1,0 @@
-{
-  "topic": "Answer-key binding — symbolic factored answer",
-  "problem_count": 1,
-  "problems": [
-    {"id": 1, "type": "factor", "expr": "x**2 - 7*x + 12", "expected": "(x - 3)*(x - 4)"}
-  ]
-}

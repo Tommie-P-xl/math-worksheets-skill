@@ -1,9 +1,0 @@
-{
-  "schema_version":"1.0","task_id":"curr-173","judge":{"type":"independent_codex_judge","id":"gpt-5.6","agent":"codex","model":"gpt-5.6","completed_at":"2026-08-04T00:10:00Z"},"verdict":"REJECT",
-  "hard_failures":["Final delivery evidence does not surface student_worksheet.","Final delivery evidence does not surface step_by_step_answer_key.","Final delivery evidence does not surface study_guide."],
-  "dimension_scores":{"curriculum_alignment":4,"problem_set_design":4,"mathematical_correctness":4,"answer_key_quality":4,"study_guide_quality":4,"clarity_and_accessibility":4,"visual_and_print_quality":4,"instruction_following":1},"total_score":29,"manual_items_reviewed":0,"incorrect_or_ambiguous_items":[],
-  "errors":["All three requested PDFs exist in the prepared packet, but retained final delivery evidence did not surface them to the user."],
-  "critical_observations":["Independently expanded, combined, factored, and substituted through all 10 items; the mathematical content and worked key are correct."],
-  "artifact_findings":["Area models and sorting tables clearly represent distribution and like-term combination; rejection is solely the delivery hard gate."],
-  "rationale":"The instructional packet is mathematically excellent, but it must be rejected because the required PDFs were not surfaced in final delivery evidence."
-}

@@ -176,7 +176,7 @@ PROBLEM_USE_RE = re.compile(r"\\problem(?:\[[^\]]*\])?\{")
 
 
 def stem_regions(tex):
-    """Each \problem block's text, in document order — same region convention as
+    r"""Each \problem block's text, in document order — same region convention as
     check_layout: a block runs from one \problem use to the next, because the
     picture and the workspace sit AFTER the macro call, not inside its braces."""
     marks = [m.start() for m in PROBLEM_USE_RE.finditer(tex)]

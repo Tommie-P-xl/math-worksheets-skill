@@ -165,9 +165,9 @@ Macro reference (defined in `templates/worksheet-preamble.tex`):
 | Macro | Purpose |
 |---|---|
 | `\problem{...}` | numbered problem stem (steps the `prob` counter). With a positive workspace argument (`\problem[5cm]{...}`) it also emits the right-aligned answer line automatically — construction, don't type it |
-| `\ansline` | right-aligned "Answer: ____" blank — end every enumerate `\item` with it (`\problem` emits its own); `tests/check_layout.py` requires one answer-location macro per item |
+| `\ansline` | right-aligned "Answer: ____" blank — end every enumerate `\item` with it (`\problem` emits its own); `scripts/checks/check_layout.py` requires one answer-location macro per item |
 | `\ansblank` | inline blank for drill formats: `$7 + 5 =$~\ansblank` |
-| `\answerline{unit}` | answer blank + measurement unit (`\answerline{ft}`, `\answerline{cm$^2$}`) — the unit must match the problem's `"answer_unit"` in the verify JSON (`tests/check_answer_line.py`); suppresses `\problem`'s automatic line |
+| `\answerline{unit}` | answer blank + measurement unit (`\answerline{ft}`, `\answerline{cm$^2$}`) — the unit must match the problem's `"answer_unit"` in the verify JSON (`scripts/checks/check_answer_line.py`); suppresses `\problem`'s automatic line |
 | `\noansline` | explicit opt-out for problems whose worked product IS the answer (sketch, proof, construction) — prints nothing |
 | `\fittedtitle{...}` | shrink-to-fit title: `\LARGE` when it fits on one line, otherwise scaled to the text width — never enlarges, never wraps mid-phrase |
 | `\wsheader{Short Title}` | worksheet running header: title left, Name/Date blanks right on page 1, "(continued)" on later pages. Keep the title SHORT (under ~28 chars) — `check_template_use.py` fails one that would be shrunk to fit |
@@ -417,10 +417,10 @@ unit squares on the wide form; `wsgrid`/`wsgridwide` fix both.
 ## Geometric Figures
 
 **Figure conventions** (apply to every figure):
-- **Triangle figures are generated, not hand-drawn**: `scripts/render_figures.py` renders every `triangle`-type problem (and `right_triangle` figure specs on `approx` problems) from the verify JSON as `\probfig{N}` macros — see SKILL.md step 4b. The triangle templates below document what the renderer emits; hand-built TikZ remains the pattern only for shapes the renderer doesn't cover (circles, sectors, solids, transversals).
-- **Effort markers are generated the same way**: `scripts/render_meta.py` renders `\probpts{N}` point values and `\probmeta{N}` difficulty stars (plus a computed `\totalpoints`) from the verified difficulty tags — see SKILL.md step 4c. Never hand-type `\bigstar` or "(N pts)"; the literal forms are banned by `check_prose_consistency.py`, exactly like hand-drawn valued figures.
+- **Triangle figures are generated, not hand-drawn**: `scripts/render_figures.py` renders every `triangle`-type problem (and `right_triangle` figure specs on `approx` problems) from the verify JSON as `\probfig{N}` macros — see authoring.md step 4b. The triangle templates below document what the renderer emits; hand-built TikZ remains the pattern only for shapes the renderer doesn't cover (circles, sectors, solids, transversals).
+- **Effort markers are generated the same way**: `scripts/render_meta.py` renders `\probpts{N}` point values and `\probmeta{N}` difficulty stars (plus a computed `\totalpoints`) from the verified difficulty tags — see authoring.md step 4c. Never hand-type `\bigstar` or "(N pts)"; the literal forms are banned by `check_prose_consistency.py`, exactly like hand-drawn valued figures.
 - **Draw to scale from the problem's actual values** whenever possible — a to-scale figure is a free visual sanity check on the answer. Only distort deliberately (e.g. to make a cramped angle readable), and then add *"(not to scale)"* below the figure.
-- Label triangle vertices $A, B, C$ with sides $a, b, c$ opposite them — the same convention the `triangle` verification type uses. In right triangles the right angle sits at $C$, so $c$ is the hypotenuse — the same convention `scripts/render_figures.py` constructs (its `right_triangle` figures imply the right angle at `C`); `tests/test_figure_convention.py` fails any macro or template example that marks it elsewhere.
+- Label triangle vertices $A, B, C$ with sides $a, b, c$ opposite them — the same convention the `triangle` verification type uses. In right triangles the right angle sits at $C$, so $c$ is the hypotenuse — the same convention `scripts/render_figures.py` constructs (its `right_triangle` figures imply the right angle at `C`); Keep the macro and renderer consistent with that convention.
 - **Every number printed in a figure must come from the problem statement / verify JSON.** Never invent display values; a verified answer key with a mismatched figure is still a wrong worksheet.
 - Wrap each figure in `\begin{center}...\end{center}`.
 
@@ -570,7 +570,7 @@ Both possible triangles from the same SSA data (here $a=6$, $b=8$, $A=40^\circ$)
 
 **Don't hand-compute this figure** — `scripts/render_figures.py` emits exactly
 this construction as `\probfig{N}`, with both apexes computed by the same
-`solve_triangle` that verifies the problem (SKILL.md step 4b). That is the
+`solve_triangle` that verifies the problem (authoring.md step 4b). That is the
 point: an earlier revision of this very example shipped hand-computed constants
 `9.24`/`3.05` where the true values are `9.220`/`3.037` — transcription drift
 in the skill's own reference figure. The template below documents what the
@@ -829,9 +829,9 @@ worked example rather than as a second box inside a box. Both forms work in
 text and in math — the exemplars below write `$\ans{...}$` and that is still
 the house style, but `\ans{x = 3}` in prose is legal and prints the same thing.
 It was not always: the base definition was a bare `\boldsymbol`, math-only, and
-a study guide written from SKILL.md's prose rather than copied from a template
+a study guide written from authoring.md's prose rather than copied from a template
 failed the `compile-ss` gate with `! Missing $ inserted` pointing at a line two
-away from the cause. Pinned by `tests/test_preamble_layout.py` §8.
+away from the cause. Check the compiled PDF, because source-only checks cannot see this.
 
 ### Quick-answer bank (generated, never hand-edited)
 

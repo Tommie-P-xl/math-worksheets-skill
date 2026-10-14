@@ -1,7 +1,0 @@
-{
-  "problems": [
-    {"id": 1, "given": {"equation": "2x + 3 = 11"}, "expected": "4"},
-    {"id": 2, "given": {"f": "3x^2 - 2x + 1", "at": [0, 2]}, "expected": "1; 9"},
-    {"id": 3, "given": {"distance_m": 50}, "expected": "57"}
-  ]
-}

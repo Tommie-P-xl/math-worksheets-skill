@@ -1,7 +1,0 @@
-Here are the three PDFs for the multiplying-fractions fluency worksheet (Grades 4–5):
-
-- **Worksheet** (`ws_fracmult_curr132.pdf`) — 12 problems on multiplying fractions and mixed numbers. It opens with a worked pattern (whole number times a fraction) and ramps to independent fluency: fraction times fraction with simplifying, mixed numbers times whole numbers and each other, two word problems with units, a missing-factor puzzle, and an area challenge. No two problems repeat an identical skeleton, and the three subskills are interleaved after the warm-up.
-- **Answer key** (`ak_fracmult_curr132.pdf`) — quick-answers bank plus full step-by-step solutions (rewrite mixed numbers as improper fractions first, multiply tops and bottoms, simplify), each ending in a boxed answer with its unit where one applies.
-- **Study guide** (`ss_fracmult_curr132.pdf`) — a reference card teaching fraction-times-whole, fraction-times-fraction, and mixed-number multiplication, each with a rule box, a worked example, and a try-it, plus a watch-out on the classic "multiply the whole parts and fraction parts separately" mistake.
-
-**What is verified:** all 12 printed answers were machine-checked with SymPy, and all 6 study-guide worked examples and try-its were verified the same way. Nothing on this sheet needs instructor judgment. The full gate chain (verification, answer-slot coverage, layout, answer-key binding, page budgets) passed green.

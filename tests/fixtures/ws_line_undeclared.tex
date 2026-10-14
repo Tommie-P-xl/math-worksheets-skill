@@ -1,9 +1,0 @@
-% Known-bad against ak_bind.json (which declares NO answer_unit anywhere):
-% problem 1 prints \answerline{ft}, an unverified unit — the sheet-side
-% reverse gate must fail it. Problems 2-3 use plain \ansline, which is fine.
-\documentclass{article}\usepackage{enumitem}\begin{document}
-\begin{enumerate}[leftmargin=*, itemsep=4cm]
-  \item Solve $2x - 14 = 0$. \answerline{ft}
-  \item Compute $9.02 / 2$. \ansline
-  \item Solve $3x - 15 = 0$. \ansline
-\end{enumerate}\end{document}

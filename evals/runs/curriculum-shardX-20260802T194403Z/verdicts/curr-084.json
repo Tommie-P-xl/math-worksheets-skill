@@ -1,7 +1,0 @@
-{
-  "schema_version":"1.0","task_id":"curr-084","judge":{"type":"independent_codex_judge","id":"gpt-5.6","agent":"codex","model":"gpt-5.6","completed_at":"2026-08-04T00:00:00Z"},"verdict":"ACCEPT","hard_failures":[],
-  "dimension_scores":{"curriculum_alignment":4,"problem_set_design":4,"mathematical_correctness":4,"answer_key_quality":4,"study_guide_quality":4,"clarity_and_accessibility":4,"visual_and_print_quality":4,"instruction_following":4},"total_score":32,"manual_items_reviewed":2,"incorrect_or_ambiguous_items":[],"errors":[],
-  "critical_observations":["Manually reviewed the pizza explanation and drawing and the final equal-fourths construction.","The expected reasoning is mathematically sound and clearly distinguished from machine checks."],
-  "artifact_findings":["Every strip and circle model visibly supports the stated equal-parts diagnosis."],
-  "rationale":"Excellent misconception analysis that repeatedly forces students to check equal-sized parts before naming a fraction."
-}

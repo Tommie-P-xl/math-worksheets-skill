@@ -1,7 +1,0 @@
-{
-  "topic": "schema rejection — \"role\" only accepts \"tryit\"; any other value would bind to no box and must be a hard failure, never a silently ignored tag",
-  "problem_count": 1,
-  "problems": [
-    {"id": 1, "type": "eval", "expr": "2*x + 1", "at": {"x": 2}, "expected": 5, "role": "practice"}
-  ]
-}

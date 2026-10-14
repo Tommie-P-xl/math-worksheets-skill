@@ -1,7 +1,0 @@
-Here are the three PDFs for the common-denominators fluency worksheet (Grades 4–5):
-
-- **Worksheet** (`ws_unlikeadd_curr127.pdf`) — 12 problems on finding common denominators for unlike fractions. It ramps from a worked rewrite pattern (fill in the missing numerators) through adding and subtracting unlike fractions, two word problems with units, a missing-addend puzzle, and a three-fraction challenge. No two problems share an identical skeleton, and the three subskills (rewriting a pair, adding, subtracting) are interleaved after the warm-up so your child has to choose the method each time.
-- **Answer key** (`ak_unlikeadd_curr127.pdf`) — a quick-answers bank for fast grading plus a full step-by-step solution for every problem, each ending in a boxed final answer in simplest form.
-- **Study guide** (`ss_unlikeadd_curr127.pdf`) — a two-page reference card with one section per subskill: the rule, a short worked example, and a try-it with the answer printed upside down, plus a watch-out box on the classic "add the denominators" mistake.
-
-**What is verified:** all 14 printed answers across the 12 problems (problems 1 and 4 each have two blanks) were machine-checked with SymPy, as were all 6 worked examples and try-its in the study guide. Nothing on this sheet needs instructor judgment — the key's "What is verified" note reflects the same data. The full gate chain (verification, layout, answer-slot coverage, answer-key binding, page budgets) passed green.

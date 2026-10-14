@@ -1,9 +1,0 @@
-{
-  "topic": "study-guide structure fixtures — strategy-step gate (check_study_guide.py)",
-  "problem_count": 3,
-  "problems": [
-    {"id": 1, "type": "approx", "expr": "10*sin(40*pi/180)", "expected": 6.43, "tol": 0.01},
-    {"id": 2, "type": "approx", "expr": "asin(7/25)*180/pi", "expected": 16.26, "tol": 0.01},
-    {"id": 3, "type": "manual", "desc": "Sketch the reference triangle — verify visually"}
-  ]
-}
