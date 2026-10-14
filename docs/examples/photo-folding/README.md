@@ -1,5 +1,11 @@
 # Real screenshot example: Chinese geometry folding
 
+The current student version uses compact stems with no reserved working areas.
+Geometry labels have transparent backgrounds. The shared label-placement helper
+checks nearby candidate text boxes against every supplied segment and other
+labels, including O and H, then places them in clear sectors. Final PDF inspection
+checks actual font rendering; no white boxes cover the linework.
+
 This example was supplied by the repository owner's user request. The original
 photo is preserved as [source.png](source.png); its handwritten answers and
 working are not part of the reproduced student worksheet.

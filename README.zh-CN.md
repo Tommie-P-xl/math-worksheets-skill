@@ -14,18 +14,20 @@
 
 ## 效果展示
 
-### 原有出题功能：练习册、答案册和知识点总结
+### 功能一：生成练习题
 
 | 学生练习册 | 答案册 | 知识点总结 |
 |:---:|:---:|:---:|
 | [<img src="docs/samples/upstream/worksheet_geometry-1.png" width="250" alt="几何练习册">](docs/samples/upstream/worksheet_geometry-1.png) | [<img src="docs/samples/upstream/answerkey_geometry-1.png" width="250" alt="分步答案册">](docs/samples/upstream/answerkey_geometry-1.png) | [<img src="docs/samples/upstream/skills_summary-1.png" width="250" alt="知识点总结">](docs/samples/upstream/skills_summary-1.png) |
-| 数学图形与作答空间 | 快速答案与解题步骤 | 公式、例题和独立尝试题 |
+| 数学图形与可打印题目 | 快速答案与解题步骤 | 公式、例题和独立尝试题 |
 
-这组是**上游项目原有的输出示例**，保留作为功能展示，并非本 fork 新生成的样例。
-还可以查看上游的[数据处理练习册](docs/samples/upstream/worksheet_data-1.png)
+这组展示练习册、答案册和知识点总结的形式，示例来源见文末。
+还可查看[数据处理练习册](docs/samples/upstream/worksheet_data-1.png)
 和[答案册总结页](docs/samples/upstream/answerkey_summary_page.png)。
+这组预览演示了留答题空间的排版；当前默认采用紧凑型，效果见功能二。
+需要留空白作答区域时，请在提示中明确说明。
 
-### 新增题目复现功能：真实中文拍照题测试
+### 功能二：复现已有题目
 
 | 用户原始照片 | 重排后的学生练习册 | 含说明图的简洁答案册 |
 |:---:|:---:|:---:|
@@ -98,6 +100,9 @@ Windows 需要在 Bash 中运行脚本，并确保能找到 Python、TeX 和 `pd
 
 ## 使用模板
 
+题目默认紧凑排列，不在题干之间留答题空间；原题中的填空位置保留。
+只有明确要求时才增加作答区域。几何字母采用透明背景，并放在不与线条相交的位置。
+
 ### 通用模板
 
 ```text
@@ -112,7 +117,7 @@ Windows 需要在 Bash 中运行脚本，并确保能找到 Python、TeX 和 `pd
 输出目录：[指定文件夹]
 ```
 
-### 原项目的出题场景
+### 功能一使用模板：生成练习题
 
 | 场景 | 可直接复制的使用提示 |
 |---|---|
@@ -126,7 +131,7 @@ Windows 需要在 Bash 中运行脚本，并确保能找到 Python、TeX 和 `pd
 
 “参考照片风格另出题”会生成**新题**；如果需要保留照片中的原题，请用下面的复现模板。
 
-### 新增功能的使用场景
+### 功能二使用模板：复现与解释题目
 
 **将题目文字排成 PDF**
 

@@ -2,7 +2,7 @@
 name: math-worksheets
 description: Create printable math worksheet PDFs, concise verified answer keys, and optional study guides. Use for new practice problems or faithful reproduction of existing questions from text, screenshots, or photos, including mathematical diagrams and handwritten interference.
 metadata:
-  version: 3.7.1
+  version: 3.7.2
   author: trond.ai; fork maintained by Tommie-P-xl
 ---
 
@@ -52,6 +52,20 @@ graphs or abstract reasoning need explanatory diagrams. Add a diagram when it
 clarifies the reasoning; distinguish answer-only information from question givens.
 
 ## Build and deliver
+
+Default to compact question layout: no reserved working area between stems.
+Keep original inline fill-in blanks and figures, but do not add trailing answer
+lines or blank plotting/work areas unless requested. Use `\problem{...}` without
+a positive workspace argument and compact enumerate spacing. Only when the user
+explicitly requests working space, declare `\worksheetlayout{spacious}` and add
+the requested space inside each problem block. Keep figure size readable in either
+mode; compact layout does not mean shrinking diagrams.
+
+Geometry point/side labels must have transparent backgrounds and sit clear of
+all nearby segments, arcs and other labels. Move the anchor/position or add a
+small offset into a free sector; never hide a collision with white fill. Inspect
+the actual rendered diagram at its final print size, including internal points
+and multi-line intersections. See [solutions.md](references/solutions.md).
 
 Read [latex-templates.md](references/latex-templates.md) for document shells and
 figure styles. Each document must `\input{worksheet-preamble}`; do not retype or

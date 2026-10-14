@@ -19,6 +19,8 @@ EXAMPLE = ROOT / 'docs/examples/photo-folding'
 sys.path.insert(0, str(ROOT / 'scripts/checks'))
 from _tex_segments import blank_comments, segment_spans
 from check_sources import digest
+sys.path.insert(0, str(ROOT / 'scripts'))
+from geometry_labels import tikz_labels
 
 
 def verify_geometry():
@@ -69,8 +71,12 @@ def figure_square():
 \draw[thick] (A)--(B)--(C)--(D)--cycle;
 \draw[thick] (A)--(E) (Q)--(D) (F)--(G);
 \draw ($(O)+(.16,-.54)$)--($(O)+(.70,-.38)$)--($(O)+(.54,.16)$);
-\foreach \p/\pos in {A/above left,B/below left,C/below right,D/above right,E/below,Q/left,F/left,G/right,O/above right}
-  \node[\pos,fill=white,inner sep=1pt] at (\p) {$\p$};
+''' + tikz_labels(
+        {'A':(0,10),'B':(0,0),'C':(10,0),'D':(10,10),'E':(3,0),
+         'Q':(0,7),'F':(0,3),'G':(10,6),'O':(.825688,7.247706)},
+        [('A','B'),('B','C'),('C','D'),('D','A'),('A','E'),('Q','D'),('F','G'),
+         ((.985688,6.707706),(1.525688,6.867706)),
+         ((1.525688,6.867706),(1.365688,7.407706))], scale_cm=.43) + r'''
 \node at (5,-1.4) {图（1）};
 \end{tikzpicture}
 '''
@@ -86,16 +92,18 @@ def figure_fold(solution=False):
 \coordinate (H) at (6,2.25); \coordinate (O) at (1.5,4.5);
 \draw[thick] (A)--(B)--(C)--(D)--cycle;
 \draw[thick] (A)--(E) (F)--(G) (F)--(E)--(P)--(G);
-\foreach \p/\pos in {A/above left,B/below left,C/below right,D/above right,E/below,F/left,G/above right,P/right,H/below left,O/above right}
-  \node[\pos,fill=white,inner sep=1pt] at (\p) {$\p$};
-'''
+''' + tikz_labels(
+        {'A':(0,9),'B':(0,0),'C':(6,0),'D':(6,9),'E':(3,0),
+         'F':(0,4),'G':(6,6),'P':(7.8,3.6),'H':(6,2.25),'O':(1.5,4.5)},
+        [('A','B'),('B','C'),('C','D'),('D','A'),('A','E'),('F','G'),
+         ('F','E'),('E','P'),('P','G')] + ([('C','P'),((-1,0),(-1,9)),((0,-1.1),(6,-1.1))] if solution else []), scale_cm=.47)
     if solution:
         construction += r'''
 \draw[very thick,dashed] (C)--(P);
-\draw[thin,<->] (-1.0,0)--(-1.0,9) node[midway,left,fill=white] {$9$};
-\draw[thin,<->] (0,-1.1)--(6,-1.1) node[midway,below,fill=white] {$6$};
+\draw[thin,<->] (-1.0,0)--(-1.0,9) node[midway,left] {$9$};
+\draw[thin,<->] (0,-1.1)--(6,-1.1) node[midway,below] {$6$};
 \node[right,align=left] at (8.3,5.2) {$P(\frac{39}{5},\frac{18}{5})$};
-\node[above,fill=white,inner sep=2pt] at (3,7.6) {$GF\perp AE$};
+\node[above,fill=none,inner sep=2pt] at (3,7.6) {$GF\perp AE$};
 \node[below] at (3,-2.4) {折叠说明图：虚线为待求的 $CP$};
 '''
     else:
@@ -128,10 +136,10 @@ def prepare(source=None):
 \begin{center}
 ''' + figure_square() + r'\hspace{2.0cm}' + figure_fold() + r'''
 \end{center}
-\problem[2.5cm]{\textbf{证明推断。} 如图（1），在正方形 $ABCD$ 中，点 $E$、$Q$ 分别在边 $BC$、$AB$ 上，$DQ\perp AE$ 于点 $O$；点 $G$、$F$ 分别在边 $CD$、$AB$ 上，$GF\perp AE$。
+\problem{\textbf{证明推断。} 如图（1），在正方形 $ABCD$ 中，点 $E$、$Q$ 分别在边 $BC$、$AB$ 上，$DQ\perp AE$ 于点 $O$；点 $G$、$F$ 分别在边 $CD$、$AB$ 上，$GF\perp AE$。
 \par \tikz[baseline=(n.base)]{\node[draw,circle,inner sep=1pt,font=\small] (n) {1};} 填空：$DQ$ \ansblank\ $AE$（填“$>$”“$<$”或“$=$”）；\tikz[baseline=(n.base)]{\node[draw,circle,inner sep=1pt,font=\small] (n) {2};} 推断 $\dfrac{GF}{AE}$ 的值为 \ansblank。}
-\problem[2.5cm]{\textbf{类比探究。} 如图（2），在矩形 $ABCD$ 中，$\dfrac{BC}{AB}=k$（$k$ 为常数）。将矩形 $ABCD$ 沿 $GF$ 折叠，使点 $A$ 落在 $BC$ 边上的点 $E$ 处，得到四边形 $FEPG$；$EP$ 交 $CD$ 于点 $H$，连接 $AE$ 交 $GF$ 于点 $O$。试探究 $GF$ 与 $AE$ 之间的数量关系，并说明理由。\noansline}
-\problem[2.5cm]{\textbf{拓展应用。} 在第（2）问的条件下，连接 $CP$。当 $k=\dfrac{2}{3}$ 时，若 $\dfrac{BE}{BF}=\dfrac{3}{4}$，$GF=2\sqrt{10}$，求 $CP$ 的长。\par\hfill $CP=$ \ansblank}
+\problem{\textbf{类比探究。} 如图（2），在矩形 $ABCD$ 中，$\dfrac{BC}{AB}=k$（$k$ 为常数）。将矩形 $ABCD$ 沿 $GF$ 折叠，使点 $A$ 落在 $BC$ 边上的点 $E$ 处，得到四边形 $FEPG$；$EP$ 交 $CD$ 于点 $H$，连接 $AE$ 交 $GF$ 于点 $O$。试探究 $GF$ 与 $AE$ 之间的数量关系，并说明理由。\noansline}
+\problem{\textbf{拓展应用。} 在第（2）问的条件下，连接 $CP$。当 $k=\dfrac{2}{3}$ 时，若 $\dfrac{BE}{BF}=\dfrac{3}{4}$，$GF=2\sqrt{10}$，求 $CP$ 的长。}
 \end{document}
 '''
     ak = PREAMBLE + r'''
@@ -157,11 +165,11 @@ def prepare(source=None):
     (EXAMPLE/'ak_photo_folding.tex').write_text(ak, encoding='utf-8', newline='\n')
     verification = {'topic': '截图题复现：几何折叠', 'problem_count': 3, 'problems': [
         {'id': 1, 'type': 'compare', 'values': ['sqrt(1+x**2)', 'sqrt(1+x**2)'], 'order': 'relation', 'expected': '='},
-        {'id': 1, 'type': 'equiv', 'expr': 'sqrt(1+x**2)/sqrt(1+x**2)', 'expected': '1', 'workspace_cm': 9},
+        {'id': 1, 'type': 'equiv', 'expr': 'sqrt(1+x**2)/sqrt(1+x**2)', 'expected': '1', 'workspace_cm': 0},
         {'id': 1, 'type': 'manual', 'desc': 'Review triangle similarity and full segment DQ (not perpendicular distance DO).'},
-        {'id': 2, 'type': 'equiv', 'expr': 'k*sqrt(1+x**2)/sqrt(1+x**2)', 'expected': 'k', 'workspace_cm': 8},
+        {'id': 2, 'type': 'equiv', 'expr': 'k*sqrt(1+x**2)/sqrt(1+x**2)', 'expected': 'k', 'workspace_cm': 0},
         {'id': 2, 'type': 'manual', 'desc': 'Review folding/perpendicular-bisector and auxiliary-triangle proof.'},
-        {'id': 3, 'type': 'approx', 'expr': '2*sqrt(10)/(2/3*sqrt(1+(1/3)**2))', 'expected': 9, 'workspace_cm': 8},
+        {'id': 3, 'type': 'approx', 'expr': '2*sqrt(10)/(2/3*sqrt(1+(1/3)**2))', 'expected': 9, 'workspace_cm': 0},
         {'id': 3, 'type': 'approx', 'expr': '2/3*9', 'expected': 6},
         {'id': 3, 'type': 'approx', 'expr': '9/3', 'expected': 3},
         {'id': 3, 'type': 'approx', 'expr': '(9**2-3**2)/(2*9)', 'expected': 4},

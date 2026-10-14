@@ -25,7 +25,10 @@ None is visible to verify.py, which only sees the JSON.
    where all ten problems had a graph and three were empty axes to plot on, and
    the only edit that would have satisfied it was deleting those three grids.
 
-2. WORK SPACE. SKILL.md specifies ~5cm per problem, 8cm multi-step. Nothing
+2. WORK SPACE. Compact is the default; reserve writing room only on an explicit
+   user request with \worksheetlayout{spacious}. In spacious mode ~5cm per
+   problem or 8cm multi-step may be appropriate. The legacy floor applies only
+   to that mode. Nothing
    enforced it, so a generator can emit itemsep=14pt (about half a line) and
    produce a sheet with nowhere to show work. Trig and multi-step algebra need
    three or four lines each. Space is credited from itemsep, signed \vspace
@@ -80,7 +83,7 @@ import sys
 from _probfig import expand_probfigs, probfig_bodies
 from _tex_segments import enumerate_lists
 
-MIN_CM_PER_PROBLEM = 2.5      # hard floor; SKILL.md recommends 5cm
+MIN_CM_PER_PROBLEM = 2.5      # floor only for explicitly spacious worksheets
 # A worksheet page holds ~24cm of text. \problem wraps stem + workspace in ONE
 # unbreakable minipage, so a workspace larger than the page cannot break and
 # simply runs off the bottom margin: the engine reports "Overfull \vbox ...
@@ -444,6 +447,11 @@ def main():
         tex, _ = expand_probfigs(tex, probfig_bodies(open(figs_path).read()))
     # blank comments AFTER expansion so rendered figure bodies are cleaned too
     tex = strip_comments(tex)
+    layouts = re.findall(r"\\worksheetlayout\s*\{([^{}]*)\}", tex)
+    if any(mode not in ("compact", "spacious") for mode in layouts):
+        print("worksheetlayout must be compact or spacious", file=sys.stderr)
+        return 1
+    spacious = bool(layouts and layouts[-1] == "spacious")
     name = path.rsplit("/", 1)[-1]
     if re.match(r"^(ak|ss)_", name):
         print(f"check_layout: {name} is a key/guide, not written on — skipped")
@@ -451,6 +459,7 @@ def main():
 
     faults = []
     print(f"Layout report: {path}")
+    print("  mode: " + ("spacious (requested working room)" if spacious else "compact (no reserved working room)"))
 
     # Depth-aware: every enumerate at any depth is its own list, judged
     # against its own [itemsep=..] — a naive .*? regex ended the outer list at
@@ -492,7 +501,11 @@ def main():
         thin = [(i, round(space_cm(opts, it), 2))
                 for i, (it, nested) in enumerate(zip(its, had_nested), 1)
                 if not nested and not is_plotting_workspace(it)
-                and space_cm(opts, it) < MIN_CM_PER_PROBLEM]
+                and spacious and space_cm(opts, it) < MIN_CM_PER_PROBLEM]
+        excessive = [(i, round(space_cm(opts, it), 2)) for i, it in enumerate(its, 1)
+                     if not spacious and space_cm(opts, it) > 0.75]
+        if excessive:
+            faults.append(f"list {n}: compact mode has reserved working space {excessive}; remove it or declare \\worksheetlayout{{spacious}} for an explicit user request")
         if thin:
             worst = min(c for _, c in thin)
             faults.append(
@@ -501,11 +514,11 @@ def main():
                 f"SKILL.md specifies ~5cm per problem, 8cm multi-step. Raise itemsep "
                 f"or add \\vspace after each item.")
         else:
-            print(f"  list {n}: work space ok (all {len(its)} problems ≥ {MIN_CM_PER_PROBLEM}cm)")
+            print(f"  list {n}: {'requested work space' if spacious else 'compact spacing'} ok")
 
         # 4. answer location (\problem regions are exempt — see the docstring)
         noans = [i for i, it in enumerate(its, 1) if not ANSWER_RE.search(it)]
-        if noans:
+        if noans and spacious:
             faults.append(
                 f"list {n}: items {noans} have no designated answer location. "
                 f"End each item with \\ansline (right-aligned answer blank) or "
@@ -548,7 +561,11 @@ def main():
         thin = [(i, round(opt + space_cm("", r), 2))
                 for i, (opt, r, had_list) in enumerate(regions, 1)
                 if not had_list and not is_plotting_workspace(r)
-                and opt + space_cm("", r) < MIN_CM_PER_PROBLEM]
+                and spacious and opt + space_cm("", r) < MIN_CM_PER_PROBLEM]
+        excessive = [(i, round(opt + space_cm("", r), 2)) for i, (opt, r, _) in enumerate(regions, 1)
+                     if not spacious and (opt > 0 or space_cm("", r) > 0.75)]
+        if excessive:
+            faults.append(f"problem blocks: compact mode has reserved working space {excessive}; use \\problem{{...}} with no workspace, or declare \\worksheetlayout{{spacious}} for requested writing room")
         if thin:
             worst = min(c for _, c in thin)
             faults.append(
@@ -561,8 +578,7 @@ def main():
                 f"workspace as the macro's optional argument — \\problem[5cm]{{...}} "
                 f"— so it lives inside the problem's unbreakable minipage.")
         else:
-            print(f"  problem blocks: work space ok "
-                  f"(all {len(regions)} problems ≥ {MIN_CM_PER_PROBLEM}cm)")
+            print(f"  problem blocks: {'requested work space' if spacious else 'compact spacing'} ok")
 
         # 5. oversized workspace — an unbreakable minipage taller than the page
         huge = [(i, round(opt + space_cm("", r), 2))
@@ -612,7 +628,7 @@ def main():
         for f in faults:
             print(f"  • {f}")
         return 1
-    print("\n✅ layout ok — figures are unambiguous and every problem has room to work.")
+    print("\n✅ layout ok — figure scope and declared compact/spacious layout respected.")
     return 0
 
 

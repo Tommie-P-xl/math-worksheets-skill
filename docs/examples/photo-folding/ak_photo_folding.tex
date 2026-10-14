@@ -29,14 +29,22 @@
 \coordinate (H) at (6,2.25); \coordinate (O) at (1.5,4.5);
 \draw[thick] (A)--(B)--(C)--(D)--cycle;
 \draw[thick] (A)--(E) (F)--(G) (F)--(E)--(P)--(G);
-\foreach \p/\pos in {A/above left,B/below left,C/below right,D/above right,E/below,F/left,G/above right,P/right,H/below left,O/above right}
-  \node[\pos,fill=white,inner sep=1pt] at (\p) {$\p$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (0.000000,9.530929) {$A$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (-0.508495,0.000000) {$B$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (6.000000,-0.530929) {$C$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (6.000000,9.530929) {$D$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (3.000000,-0.530929) {$E$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (-0.508495,4.000000) {$F$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (6.658052,6.299115) {$G$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (8.308495,3.600000) {$P$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (5.491505,2.780929) {$H$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (0.542833,4.881371) {$O$};
 
 \draw[very thick,dashed] (C)--(P);
-\draw[thin,<->] (-1.0,0)--(-1.0,9) node[midway,left,fill=white] {$9$};
-\draw[thin,<->] (0,-1.1)--(6,-1.1) node[midway,below,fill=white] {$6$};
+\draw[thin,<->] (-1.0,0)--(-1.0,9) node[midway,left] {$9$};
+\draw[thin,<->] (0,-1.1)--(6,-1.1) node[midway,below] {$6$};
 \node[right,align=left] at (8.3,5.2) {$P(\frac{39}{5},\frac{18}{5})$};
-\node[above,fill=white,inner sep=2pt] at (3,7.6) {$GF\perp AE$};
+\node[above,fill=none,inner sep=2pt] at (3,7.6) {$GF\perp AE$};
 \node[below] at (3,-2.4) {折叠说明图：虚线为待求的 $CP$};
 \end{tikzpicture}
 

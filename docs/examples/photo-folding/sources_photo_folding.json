@@ -6,21 +6,21 @@
       "source": "User photograph, original question 1 part (1); handwritten answers excluded",
       "transcription_reviewed": true,
       "uncertainties": [],
-      "block_sha256": "a126039481f104f48118bc3d1c3d05e49eb02c701e6071ebd638ad3e08f03057"
+      "block_sha256": "c20a63efbae709dbc38cdafc322b7c1ec6891604acec871ce518fab2122c201e"
     },
     {
       "id": 2,
       "source": "User photograph, original question 1 part (2); handwritten answers excluded",
       "transcription_reviewed": true,
       "uncertainties": [],
-      "block_sha256": "562b03d2ee5f8f1059c758623df8c7bf63f78a2bf127f332714012b38c482178"
+      "block_sha256": "f544876c845e98e463103a38283eefcfb7f9c067ce3d60e415675837101dc150"
     },
     {
       "id": 3,
       "source": "User photograph, original question 1 part (3); handwritten answers excluded",
       "transcription_reviewed": true,
       "uncertainties": [],
-      "block_sha256": "216c7c9340bc04807806ed5cd53e21feddf6ea274279f8fdd42f0004615c1448"
+      "block_sha256": "ed2460694cc73f4bd6dc6cf7f16ad1b6cfd8da9ea0685a45ee44d6415e9b9316"
     }
   ],
   "assets": []

@@ -227,7 +227,7 @@ def effective_workspace(p):
     reading WORKSPACE directly is how the two-column halving came to be decided
     by a number no problem on the sheet was actually using (see budget()).
     """
-    default = WORKSPACE.get(p.get("type", "manual"), STANDARD)
+    default = 0.0  # Compact default; requested/figure block height can be declared.
     ws = p.get("workspace_cm")
     # verify.py runs first and rejects a non-numeric workspace_cm, but this
     # module is also called directly, so it degrades to the type default rather
@@ -355,31 +355,8 @@ def budget(spec, paper=DEFAULT_PAPER, size=DEFAULT_SIZE, access=DEFAULT_ACCESS):
         packed = sum(c for c in costs if c <= page_cm / 2)
         total = sum(math.ceil(c / page_cm) * page_cm for c in tall) + packed
 
-    # AN ALL-COMPACT SHEET IS THE TWO-COLUMN DRILL FORMAT: TWO PER ROW, so it
-    # is charged half height. What makes a sheet compact is the room its
-    # problems actually get, and this used to ask the TYPE DEFAULT instead —
-    # a number that stops being true the moment an author declares
-    # workspace_cm, which is precisely when it matters.
-    #
-    # The types with the compact default are `compare` and `estimate` (and
-    # `read_data`, `probability`): the elementary comparison and estimation
-    # bands. So a sheet of eight compare problems each declaring 6cm of work
-    # space, set as ordinary single-column \problem with no multicols anywhere
-    # in the .tex, was silently charged half of what it had declared.
-    # Reproduced by changing ONE type field and nothing else: 32.0cm -> 64.1cm,
-    # ideal 2 -> 3, against a real 3 pages; a second sheet 43.8 against a true
-    # 87.6, ideal 2 against a real 4.
-    #
-    # The consequence lands on the author twice. The ceiling derives from the
-    # ideal, so the sheet gets one one to two pages tighter than its content
-    # needs; and the remedy this module prints — declare more workspace_cm —
-    # then buys half of every centimetre it declares, so following the advice
-    # literally cannot close the gap. Asking effective_workspace ends both.
-    all_compact = bool(unique) and all(
-        effective_workspace(p) <= COMPACT
-        and not isinstance(p.get("figure"), dict) for p in unique)
-    if all_compact:
-        total /= 2.0
+    # Compact spacing does not imply two columns. Do not halve the charge.
+    all_compact = False
 
     title_block_cm = 2.0 * scale             # title + rule + instruction line
     ideal = max(1, math.ceil((total + title_block_cm) / page_cm))

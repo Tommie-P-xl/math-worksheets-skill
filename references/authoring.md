@@ -1,5 +1,19 @@
 # New problem authoring
 
+## Layout policy
+
+Use compact question layout by default: no reserved working space between stems.
+Keep original inline blanks and readable diagrams. Only when the user explicitly
+requests writing room, add `\worksheetlayout{spacious}` and choose the requested
+workspace. Examples below with positive `\problem[Ncm]`, large itemsep or blank
+working grids are spacious examples, not defaults. This policy takes precedence
+over older workspace recommendations in detailed examples.
+
+Geometry letters/side labels have transparent backgrounds. Choose an anchor and
+offset in a clear region; do not cover lines with white-filled label boxes. Inspect
+the rendered figure at the intended print size. Tick-label styling and open-point
+markers on coordinate graphs are separate from geometry letter placement.
+
 Applies to newly designed worksheets. For source reproduction, read reproduction.md; its output choices and fidelity rules take precedence.
 
 ### 1. Gather requirements
@@ -115,14 +129,11 @@ Patterns".
 ```
 `$SKILL_DIR/templates/worksheet-preamble.tex` carries the packages, `\problem`, `\fittedtitle`, the `\wsheader`/`\akheader`/`\ssheader` + title-block macros, and the study-guide box environments; `templates/figure-macros.tex` carries the figure macros. `compile.sh` (and therefore `build.sh`) stages both files beside your `.tex` automatically, so `/tmp` compiles just work — but only when you compile through the scripts, never by invoking the engine directly. Only `geometry` stays in the document (margins differ between worksheets and study guides). `build.sh` enforces this mechanically — the `template-ws`/`template-ak`/`template-ss` gates (`scripts/checks/check_template_use.py`) fail any document that hand-rolls its shell, `\input`s a non-shipped preamble file, or redefines a shipped macro/environment/color.
 
-**Work space defaults**: `\problem[5cm]{...}` per problem; `8cm` for multi-step; `10cm+` for graphs.
-The workspace must live **inside the problem's unbreakable block** (the `\problem` macro's
-minipage, or a per-item minipage in lists — see the templates): `\vspace` glue outside it
-is silently discarded when it falls at a page or column break, leaving a bottom-of-page
-problem with zero room to work. These are a floor, not a suggestion: `scripts/checks/check_layout.py`
-fails a worksheet whose problems get under 2.5cm and flags workspace `\vspace` left outside
-a minipage. A sheet with correct answers and nowhere to write them is a sheet the student
-cannot use.
+**Work space:** use `\problem{...}` without reserved space by default.
+For an explicit writing-space request, declare `\worksheetlayout{spacious}`;
+about 5cm per problem, 8cm for multi-step work or a user-specified amount is then
+appropriate. Keep requested space inside the problem's unbreakable block. The
+layout gate only enforces the 2.5cm writing-space floor in spacious mode.
 
 **Page overrun: count problems per page BEFORE choosing a remedy.** `page_budget.py`
 prints two NOTEs whose fixes point in opposite directions, and applying the wrong one
@@ -144,9 +155,9 @@ BOTH columns, or a `tikzpicture`'s bottom-sitting baseline makes the columns sta
 doubles the block instead (the tell: shrinking the figure changes the page count by
 exactly zero).
 
-**Answer location (every problem gets one):** `\problem` sheets emit the right-aligned
+**Answer location (spacious worksheets):** `\problem` sheets emit the right-aligned
 answer blank automatically whenever the workspace argument is positive — write nothing
-extra. On enumerate/`\item` sheets, end every item with `\ansline` (or an inline
+extra. On spacious enumerate/`\item` sheets, end every item with `\ansline` (or an inline
 `\ansblank` for drill formats: `$7 + 5 =$~\ansblank`). Mark `\noansline` only where the
 worked product IS the answer — graph sketches, proofs, constructions (typically the
 `manual`-type set). `scripts/checks/check_layout.py` enforces one answer-location macro per item;

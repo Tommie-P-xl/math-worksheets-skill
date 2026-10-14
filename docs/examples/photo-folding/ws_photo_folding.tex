@@ -19,8 +19,16 @@
 \draw[thick] (A)--(B)--(C)--(D)--cycle;
 \draw[thick] (A)--(E) (Q)--(D) (F)--(G);
 \draw ($(O)+(.16,-.54)$)--($(O)+(.70,-.38)$)--($(O)+(.54,.16)$);
-\foreach \p/\pos in {A/above left,B/below left,C/below right,D/above right,E/below,Q/left,F/left,G/right,O/above right}
-  \node[\pos,fill=white,inner sep=1pt] at (\p) {$\p$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (0.000000,10.580317) {$A$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (0.000000,-0.580317) {$B$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (10.555797,0.000000) {$C$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (10.555797,10.000000) {$D$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (3.000000,-0.580317) {$E$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (-0.555797,7.000000) {$Q$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (-0.555797,3.000000) {$F$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (10.555797,6.000000) {$G$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (1.218015,8.318432) {$O$};
+
 \node at (5,-1.4) {图（1）};
 \end{tikzpicture}
 \hspace{2.0cm}
@@ -32,14 +40,22 @@
 \coordinate (H) at (6,2.25); \coordinate (O) at (1.5,4.5);
 \draw[thick] (A)--(B)--(C)--(D)--cycle;
 \draw[thick] (A)--(E) (F)--(G) (F)--(E)--(P)--(G);
-\foreach \p/\pos in {A/above left,B/below left,C/below right,D/above right,E/below,F/left,G/above right,P/right,H/below left,O/above right}
-  \node[\pos,fill=white,inner sep=1pt] at (\p) {$\p$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (0.000000,9.530929) {$A$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (-0.508495,0.000000) {$B$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (6.000000,-0.530929) {$C$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (6.000000,9.530929) {$D$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (3.000000,-0.530929) {$E$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (-0.508495,4.000000) {$F$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (6.658052,6.299115) {$G$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (8.308495,3.600000) {$P$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (6.508495,1.719071) {$H$};
+\node[anchor=center,fill=none,inner sep=0pt,outer sep=0pt] at (0.542833,4.881371) {$O$};
 \node at (3,-1.4) {图（2）};
 \end{tikzpicture}
 
 \end{center}
-\problem[2.5cm]{\textbf{证明推断。} 如图（1），在正方形 $ABCD$ 中，点 $E$、$Q$ 分别在边 $BC$、$AB$ 上，$DQ\perp AE$ 于点 $O$；点 $G$、$F$ 分别在边 $CD$、$AB$ 上，$GF\perp AE$。
+\problem{\textbf{证明推断。} 如图（1），在正方形 $ABCD$ 中，点 $E$、$Q$ 分别在边 $BC$、$AB$ 上，$DQ\perp AE$ 于点 $O$；点 $G$、$F$ 分别在边 $CD$、$AB$ 上，$GF\perp AE$。
 \par \tikz[baseline=(n.base)]{\node[draw,circle,inner sep=1pt,font=\small] (n) {1};} 填空：$DQ$ \ansblank\ $AE$（填“$>$”“$<$”或“$=$”）；\tikz[baseline=(n.base)]{\node[draw,circle,inner sep=1pt,font=\small] (n) {2};} 推断 $\dfrac{GF}{AE}$ 的值为 \ansblank。}
-\problem[2.5cm]{\textbf{类比探究。} 如图（2），在矩形 $ABCD$ 中，$\dfrac{BC}{AB}=k$（$k$ 为常数）。将矩形 $ABCD$ 沿 $GF$ 折叠，使点 $A$ 落在 $BC$ 边上的点 $E$ 处，得到四边形 $FEPG$；$EP$ 交 $CD$ 于点 $H$，连接 $AE$ 交 $GF$ 于点 $O$。试探究 $GF$ 与 $AE$ 之间的数量关系，并说明理由。\noansline}
-\problem[2.5cm]{\textbf{拓展应用。} 在第（2）问的条件下，连接 $CP$。当 $k=\dfrac{2}{3}$ 时，若 $\dfrac{BE}{BF}=\dfrac{3}{4}$，$GF=2\sqrt{10}$，求 $CP$ 的长。\par\hfill $CP=$ \ansblank}
+\problem{\textbf{类比探究。} 如图（2），在矩形 $ABCD$ 中，$\dfrac{BC}{AB}=k$（$k$ 为常数）。将矩形 $ABCD$ 沿 $GF$ 折叠，使点 $A$ 落在 $BC$ 边上的点 $E$ 处，得到四边形 $FEPG$；$EP$ 交 $CD$ 于点 $H$，连接 $AE$ 交 $GF$ 于点 $O$。试探究 $GF$ 与 $AE$ 之间的数量关系，并说明理由。\noansline}
+\problem{\textbf{拓展应用。} 在第（2）问的条件下，连接 $CP$。当 $k=\dfrac{2}{3}$ 时，若 $\dfrac{BE}{BF}=\dfrac{3}{4}$，$GF=2\sqrt{10}$，求 $CP$ 的长。}
 \end{document}

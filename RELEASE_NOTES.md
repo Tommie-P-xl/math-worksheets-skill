@@ -1,4 +1,11 @@
-# v3.7.1
+# v3.7.2
+
+- Default to compact question layout; require an explicit spacious declaration for requested working areas.
+- Apply workspace minimums only to spacious worksheets and remove implicit workspace/two-column assumptions from the page budget.
+- Add a lightweight label-placement helper: try nearby candidates, reject line/text collisions, and emit transparent labels. Use it to rebuild all point labels in the photograph example, including O/H.
+- Organize both READMEs by Function 1 and Function 2, with current layout guidance.
+
+## v3.7.1
 
 - Restore the upstream's original three-column output previews with attribution.
 - Expand English/Chinese READMEs with installation steps and copyable prompts for original practice scenarios and new reproduction/explanation scenarios.

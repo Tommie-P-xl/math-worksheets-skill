@@ -1,5 +1,19 @@
 # Concise solutions and explanatory figures
 
+For crowded geometric point labels, use `scripts/geometry_labels.py`:
+`tikz_labels(points, segments, scale_cm=..., font_pt=...)` tries eight directions
+with small gap/tangential offsets. It checks conservative text boxes against
+segments and other labels, then emits transparent TikZ nodes in nearby clear
+positions. Include all construction lines and right-angle marks; approximate arcs
+with short segments. Supply the actual print scale and font size. If no local
+position fits, enlarge/reframe the drawing and retry. Font-box estimates still
+need final PDF inspection; they are not a pixel-level guarantee.
+
+Default to compact stems with no reserved writing area. Add working space only
+when requested and declare `\worksheetlayout{spacious}`. Geometry labels must
+be transparent and displaced into a free sector: no text crossing lines and no
+white boxes erasing linework. Keep original inline blanks and mathematical content.
+
 Default to a short, readable answer: the method or essential equation, the
 decisive calculation and a boxed result. Include units, domains, excluded values,
 all solutions and rounding where they matter. Show enough reasoning to verify

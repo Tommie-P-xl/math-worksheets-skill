@@ -1,5 +1,19 @@
 # LaTeX Templates Reference
 
+## Layout policy
+
+Use compact question layout by default: no reserved working space between stems.
+Keep original inline blanks and readable diagrams. Only when the user explicitly
+requests writing room, add `\worksheetlayout{spacious}` and choose the requested
+workspace. Examples below with positive `\problem[Ncm]`, large itemsep or blank
+working grids are spacious examples, not defaults. This policy takes precedence
+over older workspace recommendations in detailed examples.
+
+Geometry letters/side labels have transparent backgrounds. Choose an anchor and
+offset in a clear region; do not cover lines with white-filled label boxes. Inspect
+the rendered figure at the intended print size. Tick-label styling and open-point
+markers on coordinate graphs are separate from geometry letter placement.
+
 ## Paper size
 
 US Letter is the default because that is what the schools this was built for

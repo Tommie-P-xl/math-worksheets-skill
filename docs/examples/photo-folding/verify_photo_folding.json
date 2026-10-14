@@ -17,7 +17,7 @@
       "type": "equiv",
       "expr": "sqrt(1+x**2)/sqrt(1+x**2)",
       "expected": "1",
-      "workspace_cm": 9
+      "workspace_cm": 0
     },
     {
       "id": 1,
@@ -29,7 +29,7 @@
       "type": "equiv",
       "expr": "k*sqrt(1+x**2)/sqrt(1+x**2)",
       "expected": "k",
-      "workspace_cm": 8
+      "workspace_cm": 0
     },
     {
       "id": 2,
@@ -41,7 +41,7 @@
       "type": "approx",
       "expr": "2*sqrt(10)/(2/3*sqrt(1+(1/3)**2))",
       "expected": 9,
-      "workspace_cm": 8
+      "workspace_cm": 0
     },
     {
       "id": 3,

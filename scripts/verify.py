@@ -1834,7 +1834,7 @@ def check_schema(p):
         if isinstance(ws, bool) or not isinstance(ws, (int, float)):
             raise VerifyInputError(
                 f"'workspace_cm' must be a number of centimetres, got {ws!r}")
-        if not 0 < ws <= 24:
+        if not 0 <= ws <= 24:
             raise VerifyInputError(
                 f"'workspace_cm' must be between 0 and 24 cm, got {ws}")
     # word_problem is a flag, and the budget branches on truthiness — so a

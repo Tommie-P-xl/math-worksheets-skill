@@ -1,5 +1,10 @@
 # Reproduce questions from text or images
 
+Default to compact stems with no reserved writing area. Add working space only
+when requested and declare `\worksheetlayout{spacious}`. Geometry labels must
+be transparent and displaced into a free sector: no text crossing lines and no
+white boxes erasing linework. Keep original inline blanks and mathematical content.
+
 Use this workflow when the user already supplies the questions. These rules
 override new-question authoring defaults.
 

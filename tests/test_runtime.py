@@ -18,6 +18,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts/checks'))
 from _tex_segments import blank_comments, segment_spans
 from check_sources import digest, validate
+sys.path.insert(0, str(ROOT / 'scripts'))
+from geometry_labels import place_labels, segment_hits_box, boxes_overlap
 
 BASH = shutil.which('bash')
 if os.name == 'nt' and Path('C:/msys64/usr/bin/bash.exe').exists():
@@ -151,6 +153,45 @@ class Runtime(unittest.TestCase):
     def test_original_three_document_build(self):
         self.build()
         self.assertEqual(len(list((self.work / 'out').glob('*.pdf'))), 3)
+
+    def test_compact_default_and_requested_workspace(self):
+        checker = ROOT / 'scripts/checks/check_layout.py'
+        ws = self.work / 'ws_compact.tex'
+        ws.write_text(r'\begin{document}\problem{Solve $x+1=3$.}\end{document}')
+        self.assertEqual(execute(checker, [ws]).returncode, 0)
+        ws.write_text(r'\begin{document}\problem[5cm]{Solve $x+1=3$.}\end{document}')
+        self.assertEqual(execute(checker, [ws]).returncode, 1)
+        ws.write_text(r'\worksheetlayout{spacious}\begin{document}\problem[5cm]{Solve $x+1=3$.}\end{document}')
+        self.assertEqual(execute(checker, [ws]).returncode, 0)
+        ws.write_text(r'\worksheetlayout{spacious}\begin{document}\problem[0pt]{Solve $x+1=3$.}\end{document}')
+        self.assertEqual(execute(checker, [ws]).returncode, 1)
+
+    def test_intersection_label_placement_clears_lines_and_other_labels(self):
+        points={'A':(0,9),'B':(0,0),'C':(6,0),'D':(6,9),'E':(3,0),
+                'F':(0,4),'G':(6,6),'P':(7.8,3.6),'O':(1.5,4.5),'H':(6,2.25)}
+        segments=[('A','B'),('B','C'),('C','D'),('D','A'),('A','E'),
+                  ('F','G'),('F','E'),('E','P'),('P','G'),('C','P'),
+                  ((-1,0),(-1,9)),((0,-1.1),(6,-1.1))]
+        placed=place_labels(points,segments,scale_cm=.47)
+        unit=.47*72.27/2.54
+        printed={k:(p[0]*unit,p[1]*unit) for k,p in points.items()}
+        def endpoint(value):
+            return printed[value] if isinstance(value,str) else (value[0]*unit,value[1]*unit)
+        boxes=[v['box_pt'] for v in placed.values()]
+        for box in boxes:
+            for a,b in segments:
+                self.assertFalse(segment_hits_box(endpoint(a),endpoint(b),box,1.5))
+        for i,box in enumerate(boxes):
+            for other in boxes[i+1:]:
+                self.assertFalse(boxes_overlap(box,other,1.5))
+
+    def test_line_box_crossing_touching_and_disjoint(self):
+        box=(-1,-1,1,1)
+        for a,b,expected in [((-2,0),(2,0),True),((-2,1),(2,1),True),
+                             ((2,2),(3,3),False),((0,0),(0,0),True),
+                             ((2,0),(2,0),False),((-2,1),(0,3),False)]:
+            with self.subTest(a=a,b=b):
+                self.assertEqual(segment_hits_box(a,b,box),expected)
 
     def test_reproduction_without_guide(self):
         ws = self.work / 'ws_build_demo.tex'

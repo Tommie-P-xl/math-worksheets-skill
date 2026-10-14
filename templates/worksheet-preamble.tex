@@ -119,6 +119,13 @@
 \newif\ifmws@sans
 \newif\ifmws@bigblanks
 \newif\ifmws@ans
+\newif\ifmws@spacious
+\mws@spaciousfalse
+% Compact is the default. Declare spacious only for requested writing room.
+\newcommand{\worksheetlayout}[1]{%
+  \def\mws@layout{#1}\def\mws@spaceword{spacious}%
+  \ifx\mws@layout\mws@spaceword\global\mws@spacioustrue
+  \else\global\mws@spaciousfalse\fi}
 \mws@anstrue
 \newdimen\mws@wsdim
 \newcommand{\noansline}{\global\mws@ansfalse}
@@ -155,7 +162,7 @@
 % and multi-part parents stay untouched) and only if the stem did not opt out.
 % The opt-out flag is reset at the START of each \problem, not the end — a
 % \noansline inside an enumerate item must never leak into a later \problem.
-\newcommand{\problem}[2][0pt]{\par\ifmws@akmode\vspace{0.5cm plus 0.45cm minus 0.15cm}\else\vspace{0.4cm}\fi\global\mws@anstrue\noindent\begin{minipage}{\linewidth}\stepcounter{prob}\noindent\textbf{\large\theprob.}\quad #2\par\vspace*{#1}\mws@wsdim=#1\relax\ifdim\mws@wsdim>0pt\ifmws@ans\ansline\fi\fi\end{minipage}\par}
+\newcommand{\problem}[2][0pt]{\par\ifmws@akmode\vspace{0.5cm plus 0.45cm minus 0.15cm}\else\ifmws@spacious\vspace{0.4cm}\else\vspace{0.15cm}\fi\fi\global\mws@anstrue\noindent\begin{minipage}{\linewidth}\stepcounter{prob}\noindent\textbf{\large\theprob.}\quad #2\par\vspace*{#1}\mws@wsdim=#1\relax\ifdim\mws@wsdim>0pt\ifmws@ans\ansline\fi\fi\end{minipage}\par}
 \makeatother
 
 % ── Accessibility modes ─────────────────────────────────────────────────────
@@ -727,7 +734,7 @@
   wsasym/.style={dash pattern=on 3pt off 2pt, line width=0.8pt, black!75},
   wsclosed/.style={draw=black, fill=black, line width=0.7pt},
   wsopen/.style={draw=black, fill=white, line width=0.9pt},
-  wslabel/.style={font=\small, fill=white, inner sep=1.5pt},
+  wslabel/.style={font=\small, fill=none, inner sep=2.5pt},
 }
 
 % ── Dot plot / line plot (K-8) ──────────────────────────────────────────────

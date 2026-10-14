@@ -215,7 +215,7 @@ def _anchor(x, y):
 
 
 def _node(anchor, pos, text, thin, shift_dir=None, shift_pt=0.0):
-    opts = [anchor]
+    opts = [anchor, "fill=none"]
     if shift_dir is not None and shift_pt:
         # explicit xshift/yshift instead of positioning-library `below left=2pt`
         # syntax — the templates only load calc/angles/quotes
