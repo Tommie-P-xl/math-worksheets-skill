@@ -2,7 +2,7 @@
 name: math-worksheets
 description: Create printable math worksheet PDFs, concise verified answer keys, and optional study guides. Use for new practice problems or faithful reproduction of existing questions from text, screenshots, or photos, including mathematical diagrams and handwritten interference.
 metadata:
-  version: 3.7.0
+  version: 3.7.1
   author: trond.ai; fork maintained by Tommie-P-xl
 ---
 
@@ -73,6 +73,10 @@ interpreter path when necessary, especially on Windows with multiple Pythons.
 Use Bash paths in shell commands and UTF-8 for generated text.
 For non-Latin content, choose and test a compatible font/LaTeX setup before the
 full build; do not silently translate the user's original question to English.
+Chinese documents can use `ctexart` with `fontset=fandol`; install XeLaTeX and
+the Chinese language/font packages. `compile.sh` auto-selects XeLaTeX for
+ctex/xeCJK/fontspec sources when available. Set `MWS_LATEX_ENGINE=xelatex` to
+select it explicitly; `auto`, `tectonic` and `pdflatex` are also supported.
 
 Exit 0: gates passed. Exit 1: fix the named failure and rebuild. Exit 2: no
 automated failure, but manual answers or externally reviewed image content remain.

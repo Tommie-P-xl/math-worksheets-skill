@@ -1,0 +1,44 @@
+\documentclass[UTF8,fontset=fandol,12pt,a4paper]{ctexart}
+\usepackage[margin=1.8cm,top=1.5cm,bottom=1.6cm]{geometry}
+\input{worksheet-preamble}
+\usetikzlibrary{calc}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\begin{document}
+
+\wstitleblock{几何折叠：参考答案与说明}{}{}
+\input{qa_photo_folding}
+\problem{\textbf{第（1）问。} \quad $\boxed{DQ=AE}$；$\boxed{\dfrac{GF}{AE}=1}$。
+\par 由 $DQ\perp AE$ 及 $AD\perp AB$，得 $\angle ADQ=\angle BAE$，故直角三角形 $ADQ$ 与 $BAE$ 相似。正方形中 $AD=AB$，所以 $DQ=AE$。
+\par 取 $AB$ 上与 $G$ 同高的点 $T$，$TG=BC$。由 $\triangle TFG$ 与 $\triangle ABE$ 相似，得 $\dfrac{GF}{AE}=\dfrac{TG}{AB}=\dfrac{BC}{AB}=1$。}
+\problem{\textbf{第（2）问。} \quad $\boxed{\dfrac{GF}{AE}=k}$，即 $GF=k\,AE$。
+\par 折叠使 $A$ 与 $E$ 关于 $GF$ 对称，故 $GF$ 是 $AE$ 的垂直平分线。设 $T$ 为 $AB$ 上与 $G$ 同高的点，$TG=BC$。由 $GF\perp AE$、$AB\perp TG$，有 $\triangle TFG\sim\triangle ABE$，所以 $\dfrac{GF}{AE}=\dfrac{TG}{AB}=\dfrac{BC}{AB}=k$。}
+\problem{\textbf{第（3）问。} \quad $\boxed{CP=\dfrac{9\sqrt5}{5}}$。
+\par 设 $AB=h$、$BE=t$。折叠有 $AF=EF$，故 $BF=\dfrac{h^2-t^2}{2h}$。
+由 $\dfrac{BE}{BF}=\dfrac34$ 得 $\dfrac{t}{h}=\dfrac13$（取符合图形的正根）。
+\par 又 $BC=\dfrac23h$，$AE=\dfrac{\sqrt{10}}3h$，故 $GF=\dfrac{2\sqrt{10}}9h=2\sqrt{10}$，得到 $\boxed{AB=9,\ BC=6,\ BE=3,\ BF=4}$。
+\par 取 $B(0,0)$、$C(6,0)$，则 $A(0,9)$、$D(6,9)$、$E(3,0)$，折痕 $GF$ 为 $y=\dfrac13x+4$。将 $D$ 关于折痕反射，得到 $\boxed{P(\dfrac{39}{5},\dfrac{18}{5})}$。
+因此 $CP=\sqrt{(\dfrac{39}{5}-6)^2+(\dfrac{18}{5})^2}=\dfrac{9\sqrt5}{5}$。
+\begin{center}
+
+\begin{tikzpicture}[scale=.47,line cap=round,line join=round]
+\coordinate (A) at (0,9); \coordinate (B) at (0,0);
+\coordinate (C) at (6,0); \coordinate (D) at (6,9);
+\coordinate (E) at (3,0); \coordinate (F) at (0,4);
+\coordinate (G) at (6,6); \coordinate (P) at (7.8,3.6);
+\coordinate (H) at (6,2.25); \coordinate (O) at (1.5,4.5);
+\draw[thick] (A)--(B)--(C)--(D)--cycle;
+\draw[thick] (A)--(E) (F)--(G) (F)--(E)--(P)--(G);
+\foreach \p/\pos in {A/above left,B/below left,C/below right,D/above right,E/below,F/left,G/above right,P/right,H/below left,O/above right}
+  \node[\pos,fill=white,inner sep=1pt] at (\p) {$\p$};
+
+\draw[very thick,dashed] (C)--(P);
+\draw[thin,<->] (-1.0,0)--(-1.0,9) node[midway,left,fill=white] {$9$};
+\draw[thin,<->] (0,-1.1)--(6,-1.1) node[midway,below,fill=white] {$6$};
+\node[right,align=left] at (8.3,5.2) {$P(\frac{39}{5},\frac{18}{5})$};
+\node[above,fill=white,inner sep=2pt] at (3,7.6) {$GF\perp AE$};
+\node[below] at (3,-2.4) {折叠说明图：虚线为待求的 $CP$};
+\end{tikzpicture}
+
+\end{center}}
+\end{document}

@@ -209,11 +209,31 @@ class Runtime(unittest.TestCase):
         with zipfile.ZipFile(archive) as z:
             names = z.namelist()
             self.assertEqual([n for n in names if n.endswith('SKILL.md')], ['math-worksheets/SKILL.md'])
-            self.assertFalse(any('/tests/' in n or '/tools/' in n or '/evals/' in n for n in names))
+            self.assertFalse(any('/tests/' in n or '/tools/' in n or '/evals/' in n or '/docs/' in n for n in names))
             self.assertTrue(all(b'\r\n' not in z.read(n) for n in names if n.endswith('.sh')))
             z.extractall(self.work / 'installed')
         self.build(root=self.work / 'installed/math-worksheets', flags=['--no-study-guide'])
         self.assertEqual(len(list((self.work / 'out').glob('*.pdf'))), 2)
+
+    def test_chinese_photo_reproduction_auto_engine_and_text(self):
+        self.assertTrue(shutil.which('xelatex'), 'XeLaTeX is required for the Chinese test')
+        spec = importlib.util.spec_from_file_location('photo_example', ROOT / 'tools/build_photo_example.py')
+        example = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(example)
+        example.EXAMPLE = self.work / 'photo'
+        example.prepare()
+        env = os.environ.copy()
+        env.update(PYTHONUTF8='1', MWS_PYTHON=sys.executable.replace('\\','/'),
+                   MSYS2_PATH_TYPE='inherit', MWS_LATEX_ENGINE='auto')
+        result = subprocess.run([BASH, '-l', str(ROOT/'scripts/build.sh'),
+            str(example.EXAMPLE/'verify_photo_folding.json'), '--reproduce',
+            '--outdir', str(self.work/'chinese')], env=env, capture_output=True, text=True, encoding='utf-8')
+        self.assertEqual(result.returncode, 2, result.stdout+result.stderr)
+        self.assertIn('(engine: xelatex)', result.stdout)
+        for name, expected in [('ws_photo_folding.pdf','类比探究'), ('ak_photo_folding.pdf','参考答案与说明')]:
+            text = subprocess.run(['pdftotext', str(self.work/'chinese'/name), '-'],
+                                  capture_output=True, text=True, encoding='utf-8', check=True).stdout
+            self.assertIn(expected, text)
 
 
 if __name__ == '__main__':

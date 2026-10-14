@@ -1,0 +1,45 @@
+\documentclass[UTF8,fontset=fandol,12pt,a4paper]{ctexart}
+\usepackage[margin=1.8cm,top=1.5cm,bottom=1.6cm]{geometry}
+\input{worksheet-preamble}
+\usetikzlibrary{calc}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\begin{document}
+
+\wstitleblock{几何折叠：证明、探究与应用}{}{}
+\noindent 姓名：\underline{\hspace{3cm}}\hfill 日期：\underline{\hspace{3cm}}
+\begin{center}
+
+\begin{tikzpicture}[scale=.43,line cap=round,line join=round]
+\coordinate (A) at (0,10); \coordinate (B) at (0,0);
+\coordinate (C) at (10,0); \coordinate (D) at (10,10);
+\coordinate (E) at (3,0); \coordinate (Q) at (0,7);
+\coordinate (F) at (0,3); \coordinate (G) at (10,6);
+\coordinate (O) at (.825688,7.247706);
+\draw[thick] (A)--(B)--(C)--(D)--cycle;
+\draw[thick] (A)--(E) (Q)--(D) (F)--(G);
+\draw ($(O)+(.16,-.54)$)--($(O)+(.70,-.38)$)--($(O)+(.54,.16)$);
+\foreach \p/\pos in {A/above left,B/below left,C/below right,D/above right,E/below,Q/left,F/left,G/right,O/above right}
+  \node[\pos,fill=white,inner sep=1pt] at (\p) {$\p$};
+\node at (5,-1.4) {图（1）};
+\end{tikzpicture}
+\hspace{2.0cm}
+\begin{tikzpicture}[scale=.47,line cap=round,line join=round]
+\coordinate (A) at (0,9); \coordinate (B) at (0,0);
+\coordinate (C) at (6,0); \coordinate (D) at (6,9);
+\coordinate (E) at (3,0); \coordinate (F) at (0,4);
+\coordinate (G) at (6,6); \coordinate (P) at (7.8,3.6);
+\coordinate (H) at (6,2.25); \coordinate (O) at (1.5,4.5);
+\draw[thick] (A)--(B)--(C)--(D)--cycle;
+\draw[thick] (A)--(E) (F)--(G) (F)--(E)--(P)--(G);
+\foreach \p/\pos in {A/above left,B/below left,C/below right,D/above right,E/below,F/left,G/above right,P/right,H/below left,O/above right}
+  \node[\pos,fill=white,inner sep=1pt] at (\p) {$\p$};
+\node at (3,-1.4) {图（2）};
+\end{tikzpicture}
+
+\end{center}
+\problem[2.5cm]{\textbf{证明推断。} 如图（1），在正方形 $ABCD$ 中，点 $E$、$Q$ 分别在边 $BC$、$AB$ 上，$DQ\perp AE$ 于点 $O$；点 $G$、$F$ 分别在边 $CD$、$AB$ 上，$GF\perp AE$。
+\par \tikz[baseline=(n.base)]{\node[draw,circle,inner sep=1pt,font=\small] (n) {1};} 填空：$DQ$ \ansblank\ $AE$（填“$>$”“$<$”或“$=$”）；\tikz[baseline=(n.base)]{\node[draw,circle,inner sep=1pt,font=\small] (n) {2};} 推断 $\dfrac{GF}{AE}$ 的值为 \ansblank。}
+\problem[2.5cm]{\textbf{类比探究。} 如图（2），在矩形 $ABCD$ 中，$\dfrac{BC}{AB}=k$（$k$ 为常数）。将矩形 $ABCD$ 沿 $GF$ 折叠，使点 $A$ 落在 $BC$ 边上的点 $E$ 处，得到四边形 $FEPG$；$EP$ 交 $CD$ 于点 $H$，连接 $AE$ 交 $GF$ 于点 $O$。试探究 $GF$ 与 $AE$ 之间的数量关系，并说明理由。\noansline}
+\problem[2.5cm]{\textbf{拓展应用。} 在第（2）问的条件下，连接 $CP$。当 $k=\dfrac{2}{3}$ 时，若 $\dfrac{BE}{BF}=\dfrac{3}{4}$，$GF=2\sqrt{10}$，求 $CP$ 的长。\par\hfill $CP=$ \ansblank}
+\end{document}

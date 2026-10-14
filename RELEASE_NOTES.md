@@ -1,4 +1,14 @@
-# v3.7.0
+# v3.7.1
+
+- Restore the upstream's original three-column output previews with attribution.
+- Expand English/Chinese READMEs with installation steps and copyable prompts for original practice scenarios and new reproduction/explanation scenarios.
+- Add a real uploaded Chinese geometry photograph example: original image, reviewed transcription, code-drawn figures, printable worksheet/key, previews and reproducible symbolic checks.
+- Add automatic/explicit XeLaTeX support for CJK documents and test Chinese text through the complete gate chain.
+- Keep documentation images and example PDFs outside the runtime-only CC Switch ZIP.
+
+The example passes 10 machine checks and retains 2 manual geometric-reasoning entries. Its student PDF excludes handwritten answers and solution-only annotations.
+
+## v3.7.0
 
 - Trim historical evaluation data, scoring tools, sample images and redundant development files; retain mathematical verification, templates and references.
 - Move mandatory runtime checks into scripts/checks and retain focused smoke/integration tests outside the installable package.

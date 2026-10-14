@@ -13,7 +13,7 @@ jobs:
       - name: Install runtime
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-pictures texlive-fonts-recommended poppler-utils
+          sudo apt-get install -y --no-install-recommends texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-pictures texlive-fonts-recommended texlive-xetex texlive-lang-chinese poppler-utils
           python -m pip install sympy==1.14.0
       - name: Core and compiled-PDF checks
         run: python -m unittest discover -s tests -v

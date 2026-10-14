@@ -1,0 +1,20 @@
+{
+  "AB": "9",
+  "BC": "6",
+  "BE": "3",
+  "BF": "4",
+  "P": [
+    "39/5",
+    "18/5"
+  ],
+  "CP": "9*sqrt(5)/5",
+  "symbolic_checks": [
+    "DQ perpendicular AE",
+    "DQ/AE=BC/AB",
+    "GF perpendicular AE",
+    "GF/AE=BC/AB",
+    "GF through midpoint AE",
+    "reflection A to E"
+  ],
+  "proof_review": "Geometric explanations remain manual; symbolic coordinate identities and application arithmetic independently checked."
+}

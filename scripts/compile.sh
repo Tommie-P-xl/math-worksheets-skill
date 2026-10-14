@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# compile.sh — Compile a LaTeX file to PDF using tectonic
+# compile.sh — Compile LaTeX with Tectonic, pdflatex, or XeLaTeX.
 # Usage: compile.sh <input.tex> [output-dir]
 #        MAX_PAGES=<n> to enforce a page budget on the compiled PDF (read from
 #        the log's "Output written ... (N pages" line by check_log.py; same
@@ -10,6 +10,13 @@
 # Tectonic auto-downloads any missing LaTeX packages on first use.
 
 set -euo pipefail
+
+# MWS_LATEX_ENGINE=auto|tectonic|pdflatex|xelatex. Unicode/CJK documents
+# prefer XeLaTeX when available; ordinary documents retain the original route.
+ENGINE="${MWS_LATEX_ENGINE:-auto}"
+case "$ENGINE" in auto|tectonic|pdflatex|xelatex) ;; *)
+  echo "Error: MWS_LATEX_ENGINE must be auto, tectonic, pdflatex, or xelatex" >&2; exit 1 ;;
+esac
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -76,6 +83,20 @@ for candidate in "$(command -v tectonic 2>/dev/null || true)" \
   fi
 done
 PDFLATEX="$(command -v pdflatex 2>/dev/null || true)"
+XELATEX="$(command -v xelatex 2>/dev/null || true)"
+CLASSIC_NAME=pdflatex
+if [[ "$ENGINE" == xelatex ]] || { [[ "$ENGINE" == auto ]] && grep -Eq 'xeCJK|ctex|fontspec|setCJK' "$TEX_FILE"; }; then
+  if [[ -n "$XELATEX" ]]; then
+    PDFLATEX="$XELATEX"; CLASSIC_NAME=xelatex; TECTONIC=""
+  elif [[ "$ENGINE" == xelatex || -z "$TECTONIC" ]]; then
+    echo "Error: this Unicode/CJK document needs xelatex (or Tectonic in auto mode). Install XeLaTeX and CJK fonts." >&2; exit 1
+  fi
+elif [[ "$ENGINE" == pdflatex ]]; then
+  TECTONIC=""
+elif [[ "$ENGINE" == tectonic ]]; then
+  PDFLATEX=""
+  [[ -n "$TECTONIC" ]] || { echo 'Error: requested tectonic is unavailable' >&2; exit 1; }
+fi
 
 if [[ -z "$TECTONIC" && -z "$PDFLATEX" ]]; then
   echo "Error: no LaTeX engine found. Install tectonic (brew/cargo install tectonic)" >&2
@@ -107,7 +128,9 @@ if grep -qE '\\input\{(worksheet-preamble|figure-macros)(\.tex)?\}' "$TEX_FILE";
   fi
 fi
 
-echo "Compiling: $(basename "$TEX_FILE") → $OUT_DIR/"
+SELECTED_ENGINE="$CLASSIC_NAME"
+[[ -z "$TECTONIC" ]] || SELECTED_ENGINE=tectonic
+echo "Compiling: $(basename "$TEX_FILE") → $OUT_DIR/ (engine: $SELECTED_ENGINE)"
 if [[ -n "$TECTONIC" ]]; then
   "$TECTONIC" "$TEX_FILE" --outdir "$OUT_DIR" --keep-logs 2>&1 | grep -v "^note: downloading"
   # tectonic reruns internally until stable, so the kept log is the FINAL
@@ -125,10 +148,10 @@ else
       -output-directory "$OUT_DIR_ABS" "$(basename "$TEX_FILE")") > "$LOG" 2>&1
   }
   if ! pdflatex_pass; then
-    echo "pdflatex failed — last lines of log:" >&2
+    echo "$CLASSIC_NAME failed — last lines of log:" >&2
     tail -25 "$LOG" >&2
     if grep -q "\.sty' not found" "$LOG"; then
-      echo "Hint: pdflatex doesn't auto-download packages — install texlive-latex-extra" >&2
+      echo "Hint: classic TeX engines need installed packages — install texlive-latex-extra" >&2
       echo "(plus texlive-pictures for TikZ/pgfplots) or use tectonic instead." >&2
     fi
     rm -f "$LOG"

@@ -1,0 +1,27 @@
+{
+  "mode": "reproduce",
+  "problems": [
+    {
+      "id": 1,
+      "source": "User photograph, original question 1 part (1); handwritten answers excluded",
+      "transcription_reviewed": true,
+      "uncertainties": [],
+      "block_sha256": "a126039481f104f48118bc3d1c3d05e49eb02c701e6071ebd638ad3e08f03057"
+    },
+    {
+      "id": 2,
+      "source": "User photograph, original question 1 part (2); handwritten answers excluded",
+      "transcription_reviewed": true,
+      "uncertainties": [],
+      "block_sha256": "562b03d2ee5f8f1059c758623df8c7bf63f78a2bf127f332714012b38c482178"
+    },
+    {
+      "id": 3,
+      "source": "User photograph, original question 1 part (3); handwritten answers excluded",
+      "transcription_reviewed": true,
+      "uncertainties": [],
+      "block_sha256": "216c7c9340bc04807806ed5cd53e21feddf6ea274279f8fdd42f0004615c1448"
+    }
+  ],
+  "assets": []
+}
