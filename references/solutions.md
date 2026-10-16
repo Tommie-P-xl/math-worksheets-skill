@@ -20,10 +20,20 @@ all solutions and rounding where they matter. Show enough reasoning to verify
 the result; avoid restating the stem, long conversational prose and repetitive
 algebra. Expand only when the user asks or the reasoning needs it.
 
-Add a program-generated explanation figure when it makes a difficult spatial
-or abstract step easier to understand: an auxiliary line in geometry, intersections
-or tangency on a function plot, a shaded integration region, a limiting process,
-or a compact sign/variation chart. Simple algebra does not need a picture.
+## Required construction diagrams
+
+Whenever a solution introduces an auxiliary construction, include the diagram
+after that construction in the answer. Draw every referenced auxiliary line,
+perpendicular foot, extension, intersection, reflected point or other added object,
+and label the points used in the reasoning. Saying "draw a perpendicular" or
+"reflect A to A'" without showing the resulting figure is insufficient.
+Use one figure for constructions that coexist; add another when the point order,
+side of a line or other geometric case changes materially. A diagram in the
+question or in a different answer is not a substitute for the constructed figure.
+
+For reasoning without auxiliary constructions, add a program-generated explanation
+figure when helpful: a shaded integration region, a limiting process, or a compact
+sign/variation chart. Simple algebra does not need a picture.
 
 - Prefer TikZ/pgfplots and the shipped styles. Another deterministic plotting
   program may export an image when appropriate; visually verify it and, for
@@ -44,3 +54,18 @@ or a compact sign/variation chart. Simple algebra does not need a picture.
 For an abstract proof, use a figure as intuition and still state the necessary
 logical argument. A diagram is not a proof. Mark non-CAS reasoning as `manual`
 and machine-check any numeric/symbolic subparts separately.
+
+## Fractions in answers
+
+Use fully braced `\frac{...}{...}`, `\dfrac{...}{...}` or `\tfrac{...}{...}` for
+all printed mathematical quotients, including intermediate steps, coordinates
+and exponents. For example, write
+`$\frac{AN}{AM}=\frac{|t-4|}{3}$`,
+`$M\left(2,\frac{23}{3}\right)$` and `$(k^2+4)^{\frac{3}{2}}$`.
+Do not print `AN/AM`, `23/3`, `^{3/2}` or `\slash` in answers. Choose the fraction
+size for readability and recheck line breaks after conversion.
+
+Verification JSON and Python expressions still use division operators, such as
+`"expected": "23/3"`. TikZ calculations/coordinate syntax and URLs also retain
+their required syntax. Do not rewrite code as LaTeX or alter reproduced question
+text to enforce an answer-only typography rule.

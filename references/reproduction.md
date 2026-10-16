@@ -86,6 +86,11 @@ with `verify.py`. Preserve a wrong printed premise rather than silently repairin
 it: explain the issue and ask which version the user wants if it prevents a
 well-defined question. See [solutions.md](solutions.md) for compact explanations.
 
+If the solution introduces auxiliary constructions, the answer must show the
+resulting labeled diagram. Typeset every mathematical quotient in the answer
+with fully braced `\frac`, `\dfrac` or `\tfrac`, including coordinates and
+intermediate steps. Keep original question text unchanged by these answer rules.
+
 Default: worksheet + key; do not produce a guide unless requested. A worksheet-only
 request still needs internal verification JSON. Omit pedagogical ramp/interleave
 tags when reproducing a source; retain original order. Use `manual` honestly for

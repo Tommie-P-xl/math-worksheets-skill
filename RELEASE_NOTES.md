@@ -1,5 +1,17 @@
 # Current release
 
+- Require a labeled answer diagram whenever a solution introduces auxiliary
+  lines, perpendicular feet, intersections, extensions or reflected points.
+  Show materially different cases separately and keep these additions out of
+  student questions.
+- Require fully braced LaTeX fractions throughout answer mathematics, including
+  intermediate steps, coordinates and fractional exponents. Preserve division
+  operators in verification/code data and original question wording.
+- Align authoring, reproduction, solution guidance and both README prompt examples
+  with these answer presentation requirements.
+
+## v3.8.0
+
 - Add a stdlib-only global SQLite bank outside the skill installation. Read/preview
   operations never archive inputs; each question/guide write requires review and
   an approval digest bound to content, source bytes and target revision.

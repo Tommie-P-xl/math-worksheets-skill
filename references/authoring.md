@@ -64,6 +64,12 @@ See `references/problem-library.md` for topic-specific problem type menus.
 
 ### 3. Write LaTeX source
 
+Follow SKILL.md's required answer presentation: include a labeled diagram of
+every auxiliary construction used in a solution, and typeset all mathematical
+quotients in answer text with fully braced LaTeX fraction commands. See
+[solutions.md](solutions.md) for scope and examples; computation/JSON syntax
+continues to use ordinary division operators.
+
 Write **three** `.tex` files to `/tmp/`:
 - `ws_TOPIC_DATE.tex` — student worksheet (blank work areas)
 - `ak_TOPIC_DATE.tex` — answer key (full step-by-step solutions)

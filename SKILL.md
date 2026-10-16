@@ -2,7 +2,7 @@
 name: math-worksheets
 description: Create math worksheets, checked answer keys and similar practice questions from text or photos. Use an optional global question bank and bounded stage-subject authoring guides for exam-style authoring; archive questions or guide changes only after individual user review and approval.
 metadata:
-  version: 3.8.0
+  version: 3.8.1
   author: trond.ai; fork maintained by Tommie-P-xl
 ---
 
@@ -74,10 +74,27 @@ practical. Data, labels and computed answers must agree. A source illustration
 that cannot be redrawn faithfully follows the choices in reproduction.md;
 do not silently substitute an AI image for mathematical evidence.
 
+### Required answer presentation
+
+1. **Show every auxiliary construction.** If a solution adds a perpendicular,
+   parallel, extension, intersection, reflected point or other auxiliary object,
+   the answer must include the resulting diagram with those objects and point
+   labels drawn. A verbal construction alone is insufficient. Include the figure
+   beside the relevant solution; use separate figures for materially different
+   cases, distinguish added lines, and keep answer-only information out of the
+   student questions. See [solutions.md](references/solutions.md).
+2. **Typeset fractions with LaTeX fraction commands.** Throughout worked answers,
+   final answers, coordinates, ratios and fractional exponents, use fully braced
+   `\frac{numerator}{denominator}`, `\dfrac{...}{...}` or `\tfrac{...}{...}`;
+   never print a mathematical quotient as `a/b` or with `\slash`. This also applies
+   to answer text in study guides. Keep `/` operators in verification JSON,
+   executable calculations, plotting coordinates and URLs as required; those are
+   source data, not printed mathematics. Preserve supplied question wording.
+
 Keep answer prose compact: the essential setup, decisive steps and final answer
-with units/domain restrictions. Read [solutions.md](references/solutions.md) when
-graphs or abstract reasoning need explanatory diagrams. Add a diagram when it
-clarifies the reasoning; distinguish answer-only information from question givens.
+with units/domain restrictions. Read [solutions.md](references/solutions.md) for
+construction diagrams and fraction examples. Other explanatory diagrams are
+optional when they clarify reasoning that introduces no auxiliary construction.
 
 ## Build and deliver
 

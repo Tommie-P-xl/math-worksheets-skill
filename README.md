@@ -272,8 +272,11 @@ Do not invent labels or reconstruct unreadable givens from an imagined answer.
 
 ```text
 Make a concise verified answer key for these supplied function/geometry questions.
-Add a small programmed diagram where intersections, auxiliary lines or an abstract
-step need visual explanation. Keep solution-only information out of the student PDF.
+Whenever a solution adds auxiliary lines, intersections or reflected points,
+include the resulting labeled diagram in that answer. Use LaTeX fraction commands
+for every mathematical quotient in answers, including intermediate steps and
+coordinates; do not print slash fractions. Keep solution-only information out of
+the student PDF.
 ```
 
 ```text
