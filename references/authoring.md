@@ -1,5 +1,12 @@
 # New problem authoring
 
+Before designing new/similar questions, follow [question-bank.md](question-bank.md):
+extract the source demand, retrieve at most 10 bank questions/guide documents in
+total, then use available official web references only when local context is
+inadequate. Ask individually before archiving uploads, outputs or guide changes;
+declining archival never blocks authoring. For Chinese curricula, align to the
+confirmed taught scope rather than forcing an unrelated CCSS/AP grade label.
+
 ## Layout policy
 
 Use compact question layout by default: no reserved working space between stems.

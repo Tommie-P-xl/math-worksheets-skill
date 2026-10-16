@@ -1,5 +1,11 @@
 # Reproduce questions from text or images
 
+For each uploaded question, offer optional global-bank archival separately from
+reproduction: show proposed stage/grade/exam, knowledge/type tags and ask whether
+to save and whether metadata is correct. Default is no save. Follow
+[question-bank.md](question-bank.md) for preview/approval; never archive an upload
+or a guide update merely because the user requested a worksheet.
+
 Default to compact stems with no reserved writing area. Add working space only
 when requested and declare `\worksheetlayout{spacious}`. Geometry labels must
 be transparent and displaced into a free sector: no text crossing lines and no

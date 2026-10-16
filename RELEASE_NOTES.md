@@ -1,4 +1,17 @@
-# v3.7.2
+# v3.8.0
+
+- Add a stdlib-only global SQLite bank outside the skill installation. Read/preview
+  operations never archive inputs; each question/guide write requires review and
+  an approval digest bound to content, source bytes and target revision.
+- Merge cross-grade references into one question; cap every tag category at five.
+- Keep one directly editable Markdown guide per stage/subject, default 6000 chars.
+  Bound combined authoring retrieval to ten references and a character budget.
+- Add storage statistics, integrity checks, JSONL export, versioned history and
+  checksum-validated backup/restore. Keep private uploads out of the release.
+- Integrate demand analysis, local-reference reuse and optional official web
+  research into authoring; require separate consent to retain research summaries.
+
+## v3.7.2
 
 - Default to compact question layout; require an explicit spacious declaration for requested working areas.
 - Apply workspace minimums only to spacious worksheets and remove implicit workspace/two-column assumptions from the page budget.
