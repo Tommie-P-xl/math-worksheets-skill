@@ -1,4 +1,4 @@
-# v3.8.0
+# Current release
 
 - Add a stdlib-only global SQLite bank outside the skill installation. Read/preview
   operations never archive inputs; each question/guide write requires review and
@@ -10,6 +10,10 @@
   checksum-validated backup/restore. Keep private uploads out of the release.
 - Integrate demand analysis, local-reference reuse and optional official web
   research into authoring; require separate consent to retain research summaries.
+- Centralize release version reads in `tools/version.py`, sourced only from
+  `SKILL.md` metadata. Derive package names, tag validation and published notes.
+- Refresh both READMEs with a centered title area, dynamic status badges, quick
+  start, navigation, workflow diagrams and expandable details, preserving examples.
 
 ## v3.7.2
 

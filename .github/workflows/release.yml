@@ -20,11 +20,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Validate tag and package
+      - name: Resolve release metadata and build package
+        id: version
         env:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          python -c 'import os,re,pathlib; v=re.search(r"^  version: ([0-9.]+)$",pathlib.Path("SKILL.md").read_text(),re.M).group(1); assert os.environ["RELEASE_TAG"] == "v"+v, "tag/version mismatch"'
+          python tools/version.py --check-tag "$RELEASE_TAG" --github-output "$GITHUB_OUTPUT" --notes-out "$RUNNER_TEMP/release-notes.md"
           python tools/package_skill.py
       - name: Install validation dependencies
         run: |
@@ -36,9 +37,9 @@ jobs:
       - name: Publish ZIP and checksum
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: |
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --notes-file RELEASE_NOTES.md
+            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --notes-file "$RUNNER_TEMP/release-notes.md" --latest
           fi
           gh release upload "$RELEASE_TAG" dist/*.zip dist/*.sha256 --clobber

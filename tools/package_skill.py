@@ -2,14 +2,14 @@
 import argparse
 import hashlib
 from pathlib import Path
-import re
 import zipfile
+from version import get_version
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def package(outdir):
-    version = re.search(r'^  version: ([\d.]+)$', (ROOT / 'SKILL.md').read_text(encoding='utf-8'), re.M).group(1)
+    version = get_version(ROOT)
     files = [ROOT / 'SKILL.md', ROOT / 'LICENSE']
     for folder in ['scripts', 'templates', 'references']:
         files.extend(p for p in (ROOT / folder).rglob('*')

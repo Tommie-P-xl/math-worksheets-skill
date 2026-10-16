@@ -1,10 +1,21 @@
-# Math Worksheets Skill
+<a id="readme-top"></a>
 
-[English](README.md) | 简体中文
+<div align="center">
 
-[![checks](https://github.com/Tommie-P-xl/math-worksheets-skill/actions/workflows/tests.yml/badge.svg)](https://github.com/Tommie-P-xl/math-worksheets-skill/actions/workflows/tests.yml)
-[![release](https://img.shields.io/github/v/release/Tommie-P-xl/math-worksheets-skill)](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest)
-[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+<h1>Math Worksheets Skill</h1>
+<p><strong>为 AI Agent 提供数学出题、原题复现与可积累的命题经验</strong></p>
+
+<p>
+  <a href="https://github.com/Tommie-P-xl/math-worksheets-skill/actions/workflows/tests.yml"><img src="https://github.com/Tommie-P-xl/math-worksheets-skill/actions/workflows/tests.yml/badge.svg" alt="Checks"></a>
+  <a href="https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest"><img src="https://img.shields.io/github/v/release/Tommie-P-xl/math-worksheets-skill?label=release&amp;color=2563eb" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-64748b" alt="MIT license"></a>
+</p>
+
+<p><a href="README.zh-CN.md">简体中文</a> &nbsp;|&nbsp; <a href="README.md">English</a></p>
+<p><a href="#quick-start">快速开始</a> &nbsp;·&nbsp; <a href="#效果展示">效果展示</a> &nbsp;·&nbsp; <a href="#全局题库">全局题库</a> &nbsp;·&nbsp; <a href="#使用模板">使用模板</a></p>
+
+</div>
+
 
 告诉 AI 你想练什么，或直接提供题目文字、截图、照片，生成可打印的数学练习 PDF。
 支持基础算术到 AP 微积分，可独立求解、验算答案，并用程序绘制数学图形。
@@ -13,7 +24,48 @@
 可选的全局题库提供参考题目和命题经验。**默认不收藏**：每道题及每次命题文档更新，
 都需要用户分别审核、确认后保存。详见[题库使用说明](references/question-bank.md)。
 
-[效果展示](#效果展示) · [全局题库](#全局题库) · [安装](#安装) · [使用模板](#使用模板) · [工作方式](#工作方式)
+| 新出题 | 原题复现 | 全局参考题库 |
+|:---|:---|:---|
+| 围绕已学知识设计练习，独立求解，输出题目、答案与可选总结。 | 核对照片与手写干扰，保留原题条件，用代码重绘数学图形。 | 复用已批准题目与命题经验，默认不收录，跨项目使用。 |
+
+
+<details>
+<summary>文档导航</summary>
+
+- [快速开始](#quick-start)
+- [效果展示](#效果展示)
+- [安装](#安装)
+- [使用模板](#使用模板)
+- [工作方式](#工作方式)
+- [全局题库](#全局题库)
+- [版本与构建](#版本与构建)
+- [来源与许可](#来源与许可)
+
+</details>
+
+
+---
+
+<a id="quick-start"></a>
+
+## 快速开始
+
+| 1 · 安装 Skill | 2 · 准备运行环境 | 3 · 交给 Agent |
+|---|---|---|
+| 从 [Releases](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest) 下载 `math-worksheets-v*.zip`，通过 CC Switch 或手动安装。 | 仅管理题库需要 Python；生成 PDF 还需要 Bash、SymPy、LaTeX 和 Poppler，[完整依赖见下文](#运行依赖)。 | 说明知识范围、数量、语言与交付物，或提供题目照片并指定复现。 |
+
+```text
+使用 math-worksheets，参考我上传的题目，出 4 道同类型的新题。
+先确认年级与已学知识，保持原题的考查结构和难度梯度。
+输出中文 A4 练习册与详细答案，题目和答案分页。
+每道题和命题文档都先询问我，未确认前不要收录到全局题库。
+```
+
+> **先选工作模式：**参考图出新题用“新出题”；保留原题文字和数字用“复现”。
+> 数学验证不等于所有证明或图形细节均已自动证明，审核边界见[工作方式](#工作方式)。
+
+
+---
 
 ## 效果展示
 
@@ -45,6 +97,219 @@
 [下载完整答案册 PDF](docs/examples/photo-folding/ak_photo_folding.pdf) ·
 [查看题干核对记录、使用提示与复现方法](docs/examples/photo-folding/README.md)
 
+<p align="right"><a href="#readme-top">返回顶部</a></p>
+
+
+---
+
+## 安装
+
+### 方式一：使用 CC Switch 安装 ZIP
+
+1. 打开 [Releases](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest)，
+   下载名称为 **`math-worksheets-v*.zip`** 的附件。
+2. 打开 **CC Switch → Skills → 从 ZIP 安装**，选择下载的 ZIP。
+3. 将技能启用或同步到 Claude Code、Codex 等需要使用的 Agent。
+4. 按下面的说明准备运行依赖。若 Agent 尚未显示该技能，重启，或直接指定安装目录的 `SKILL.md`。
+
+ZIP 中只有一个 `math-worksheets/` 目录，包含技能入口、脚本、模板、参考资料和许可。
+README 图片、示例 PDF、测试和发布工具不进入安装包。每个发布版本附带 SHA-256 校验文件。
+操作界面可参考 [CC Switch 技能管理说明](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/zh/3-extensions/3.3-skills.md)。
+
+### 方式二：手动安装
+
+解压同一个 ZIP，把其中的 **`math-worksheets` 文件夹**放入对应的个人技能目录：
+
+| Agent | 安装位置 |
+|---|---|
+| Claude Code | `~/.claude/skills/math-worksheets/` |
+| Codex | `~/.agents/skills/math-worksheets/` |
+| 其他 Agent | 对应的技能目录，或直接在提示中指定 `SKILL.md` |
+
+Codex 可以用 `$math-worksheets` 显式调用；其他 Agent 可直接使用后面的自然语言模板。
+Codex 的技能加载方式见[官方说明](https://learn.chatgpt.com/docs/build-skills)。
+如果要查看或开发源码，也可以克隆仓库：
+
+```bash
+git clone --depth 1 https://github.com/Tommie-P-xl/math-worksheets-skill.git
+```
+
+随后告诉 Agent：`请按照 /绝对路径/math-worksheets-skill/SKILL.md 制作练习册。`
+
+### 运行依赖
+
+| 工具 | 用途 |
+|---|---|
+| Bash | 执行构建流程；Windows 可使用 Git Bash 或 MSYS2 |
+| Python + SymPy ≥1.12 | 验算答案；建议使用上游评测基线版本 1.14.0 |
+| Tectonic 或 pdflatex | 编译普通 LaTeX 文档，需要 pgfplots ≥1.18 |
+| XeLaTeX 与中文字体 | 编译中文示例；本例使用 ctex 与 Fandol 字体 |
+| Poppler 的 `pdftotext` | 检查成品 PDF 中的文字位置和重叠 |
+
+```bash
+python -m pip install "sympy==1.14.0"
+```
+
+LaTeX 可以使用 [Tectonic](https://github.com/tectonic-typesetting/tectonic/releases)
+或已有的 TeX 发行版。Debian/Ubuntu 的中文编译依赖包括 `texlive-xetex`、
+`texlive-lang-chinese`；PDF 工具由 `poppler-utils` 提供。
+
+Windows 需要在 Bash 中运行脚本，并确保能找到 Python、TeX 和 `pdftotext`。
+多个 Python 并存时，用 `MWS_PYTHON` 指定已安装 SymPy 的解释器。
+中文文档可设置 `MWS_LATEX_ENGINE=xelatex`；自动模式会识别 ctex/xeCJK/fontspec 源文件。
+
+<p align="right"><a href="#readme-top">返回顶部</a></p>
+
+
+---
+
+## 使用模板
+
+题目默认紧凑排列，不在题干之间留答题空间；原题中的填空位置保留。
+只有明确要求时才增加作答区域。几何字母采用透明背景，并放在不与线条相交的位置。
+
+### 通用模板
+
+```text
+使用 math-worksheets。
+模式：[新出练习题 / 复现已有题目 / 仅制作知识点总结]
+输入或主题：[知识点、粘贴的题目文字，或附上的截图/照片]
+年级和题量：[新出题时填写；复现时保留原题，不增加题目]
+语言和纸张：[中文/英文等；A4/Letter]
+交付：[练习册+简洁答案+总结 / 练习册+答案 / 仅学生练习册]
+图形：数学图形优先用程序重绘，复杂照片先询问处理方案。
+答案：独立求解、验算可计算结果，说明精简但保留关键推理。
+输出目录：[指定文件夹]
+```
+
+### 功能一使用模板：生成练习题
+
+| 场景 | 可直接复制的使用提示 |
+|---|---|
+| 正弦定理、余弦定理 | `使用 math-worksheets，给 Leo 出 8 道正弦定理和余弦定理练习，每题配图，附分步答案和知识点总结。` |
+| 小学乘法 | `给三年级学生 Lucy 制作 12 道乘法表练习，附答案册和知识点总结。` |
+| 因式分解 | `给八年级学生出 15 道三项式因式分解题，难度逐渐增加，附简洁分步解答。` |
+| 统计与数据读取 | `制作 8 道读取柱状图并计算平均数、中位数、众数和极差的题，附图表、验算答案和复习页。` |
+| 微积分 | `制作 10 道 AP 微积分链式法则练习，附分步答案和简短的求导公式总结。` |
+| 分层练习 | `围绕 8.EE.C.8 方程组标准制作基础、常规、挑战三个层次的练习册，每层单独验算并附答案。` |
+| 参考照片风格另出题 | `把这张作业照片作为风格和难度参考，另外出 10 道新的多项式图像题，使用匹配的坐标网格并附解答。` |
+
+“参考照片风格另出题”会生成**新题**；如果需要保留照片中的原题，请用下面的复现模板。
+
+### 功能二使用模板：复现与解释题目
+
+
+<details>
+<summary>将题目文字排成 PDF</summary>
+
+**将题目文字排成 PDF**
+
+```text
+使用 math-worksheets，把下面的题目文字整理成 A4 PDF。
+保留原题题干、数值、选项与顺序，不增加题目。
+有函数图像或几何图形时优先程序重绘，独立求解并生成简洁答案册。
+[在这里粘贴题目]
+```
+
+</details>
+
+<details>
+<summary>复现带手写内容的截图/照片：上面的实际示例</summary>
+
+**复现带手写内容的截图/照片：上面的实际示例**
+
+```text
+使用 math-worksheets，将附上的几何题照片复现为中文 A4 练习册。
+保留原题三问、点名、条件与顺序，不另出题。
+区分印刷题干与手写批注，学生版不保留手写答案。
+如果重要符号或图形标注被遮挡、无法确认，先问我，不要猜。
+两幅数学图形用程序重绘。独立求解并验算，制作简洁答案册。
+最后一问增加必要的说明图，不需要知识点总结。
+全部文件保存到我指定的输出目录。
+```
+
+</details>
+
+<details>
+<summary>只交付学生练习册</summary>
+
+**只交付学生练习册**
+
+```text
+使用 math-worksheets 复现这些已有题目，只交付空白的学生练习 PDF。
+答案仍在内部独立求解和验算，但不输出答案册。
+去除手写过程，学生图中不添加答案专用的辅助线和计算结果。
+```
+
+</details>
+
+<details>
+<summary>题干含火车、照片等复杂插图</summary>
+
+**题干含火车、照片等复杂插图**
+
+```text
+将这道含火车/实景照片的题排成练习册，数学图形用程序重绘。
+复杂图片请先提供处理选择：我补充干净截图、可用时借助生图、
+用不影响解题的程序示意图，让我选定后再处理。
+不要根据猜测的答案补造看不清的标注或已知条件。
+```
+
+</details>
+
+<details>
+<summary>需要图形化解释的答案</summary>
+
+**需要图形化解释的答案**
+
+```text
+为这些函数或几何题制作简洁答案册，独立求解验算。
+涉及交点、辅助线、折叠或抽象步骤时，适当用程序加一幅说明图。
+文字只保留关键推理，答案专用信息不要出现在学生练习册中。
+```
+
+</details>
+
+<details>
+<summary>只制作知识点总结</summary>
+
+**只制作知识点总结**
+
+```text
+围绕[主题]制作两页知识点总结，包含公式、分步例题和独立尝试题。
+验算所有计算结果，不额外生成练习册。
+```
+
+</details>
+
+
+<p align="right"><a href="#readme-top">返回顶部</a></p>
+
+
+---
+
+## 工作方式
+
+Agent 出题或转录题目、独立求解，并写入 LaTeX 与验证 JSON。
+构建流程检查数学结果、作答项覆盖、单位、文档一致性和作答空间，
+编译 PDF 后再检查文字重叠。复现模式额外绑定题目审核记录与外部图片文件。
+
+| 模式 | 默认输出 |
+|---|---|
+| 新出题 | 练习册、答案册、知识点总结 |
+| 复现已有题目 | 练习册、答案册；总结可选 |
+| 仅学生练习册 | 学生 PDF；内部仍验算答案 |
+| 仅知识点总结 | 含已验算例题的总结 PDF |
+
+证明、开放解释、OCR 忠实度和外部图片内容仍需要审核。
+CAS 通过表示支持的数学计算通过检查，不代表每句证明和所有图形细节都已自动验证；
+图片审核记录也不等于机器证明。
+
+<p align="right"><a href="#readme-top">返回顶部</a></p>
+
+
+---
+
 ## 全局题库
 
 题库帮助 Agent 判断“应该出什么类型的题目，以及如何控制难度”。题目与命题经验独立于
@@ -52,6 +317,21 @@
 服务器、额外模型订阅、向量服务或后台进程。实际生成 PDF 时仍需原有的数学与排版依赖。
 
 ### 架构与数据分工
+
+```mermaid
+flowchart LR
+    A["Agent 命题流程"] --> B["SKILL.md 与参考说明"]
+    B --> C["question_bank.py"]
+    C --> D[("SQLite 题目与历史")]
+    C --> E["可编辑命题文档"]
+    C --> F["原件、配置与备份"]
+    D --> G["精简参考包"]
+    E --> G
+    G --> H["设计、求解与验证"]
+```
+
+<details>
+<summary>展开：目录结构与数据流明细</summary>
 
 ```text
 skill 安装目录                         用户全局数据目录
@@ -68,6 +348,9 @@ scripts/question_bank.py ──────────────►   ├─ 
     ▼
 精简参考包 → 设计新题 → 独立求解 → 原有数学校验与 PDF 构建
 ```
+
+</details>
+
 
 | 组成 | 存什么、如何约束 |
 |---|---|
@@ -150,6 +433,9 @@ Windows 打包应用或重定向环境可能把 AppData 映射到其他物理位
 `MWS_DATA_HOME` 指向旧目录，或从备份恢复；新目录显示为空不代表旧数据被删除。
 删除数据目录、清理宿主应用数据是另一个操作，不属于“仅重装 skill”的保留范围。
 
+<details>
+<summary>展开：固定目录、迁移方法与长度配置</summary>
+
 若要固定跨项目使用的位置，请在运行 Agent 的各环境中设置相同的 `MWS_DATA_HOME`。
 以下 PowerShell 示例假定 `D:\MathWorksheetsData` 已是你的数据目录，或你打算在此新建题库：
 
@@ -170,6 +456,8 @@ Agent 还需显式传输数据，或另行设计同步。
 每个学段学科文档默认最多 **6000 个 Unicode 字符**，包含标题与链接，可调整为
 500–12000 字符。提交和直接编辑后的读取都检查上限；超长会提示文件路径，须缩写或调整
 配置，不会截掉末尾文字，也不会自动拆成多个知识点文档。
+
+</details>
 
 ### 查看、维护与备份
 
@@ -203,169 +491,49 @@ python PATH_TO_SKILL/scripts/question_bank.py restore --file D:/Backups/math-ban
 合成题与隔离数据目录，覆盖默认不入库、批准绑定、去重、上限、直接编辑、重装路径和
 备份恢复，不会自动收录用户测试时上传的真题。
 
-## 安装
+<p align="right"><a href="#readme-top">返回顶部</a></p>
 
-### 方式一：使用 CC Switch 安装 ZIP
 
-1. 打开 [Releases](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest)，
-   下载名称为 **`math-worksheets-v*.zip`** 的附件。
-2. 打开 **CC Switch → Skills → 从 ZIP 安装**，选择下载的 ZIP。
-3. 将技能启用或同步到 Claude Code、Codex 等需要使用的 Agent。
-4. 按下面的说明准备运行依赖。若 Agent 尚未显示该技能，重启，或直接指定安装目录的 `SKILL.md`。
+---
 
-ZIP 中只有一个 `math-worksheets/` 目录，包含技能入口、脚本、模板、参考资料和许可。
-README 图片、示例 PDF、测试和发布工具不进入安装包。每个发布版本附带 SHA-256 校验文件。
-操作界面可参考 [CC Switch 技能管理说明](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/zh/3-extensions/3.3-skills.md)。
+## 版本与构建
 
-### 方式二：手动安装
+当前版本只在 [`SKILL.md`](SKILL.md) 的 `metadata.version` 中维护。
+[`tools/version.py`](tools/version.py) 为打包和发布共用的读取入口，自动派生 ZIP 名称、
+Git 标签校验及发布说明标题。README 徽章直接读取 GitHub Releases，无需手动改版本。
+历史更新记录和 Python/SymPy 依赖版本不属于当前版本配置。
 
-解压同一个 ZIP，把其中的 **`math-worksheets` 文件夹**放入对应的个人技能目录：
-
-| Agent | 安装位置 |
+| 产物 | 获取方式 |
 |---|---|
-| Claude Code | `~/.claude/skills/math-worksheets/` |
-| Codex | `~/.agents/skills/math-worksheets/` |
-| 其他 Agent | 对应的技能目录，或直接在提示中指定 `SKILL.md` |
+| 安装包与校验文件 | [最新 Release](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest) 提供 `math-worksheets-v*.zip` 和 `.zip.sha256`。 |
+| 源码与更新记录 | [源码](https://github.com/Tommie-P-xl/math-worksheets-skill) · [发布说明](RELEASE_NOTES.md) · [维护工具](tools/README.md) |
 
-Codex 可以用 `$math-worksheets` 显式调用；其他 Agent 可直接使用后面的自然语言模板。
-Codex 的技能加载方式见[官方说明](https://learn.chatgpt.com/docs/build-skills)。
-如果要查看或开发源码，也可以克隆仓库：
+<details>
+<summary>展开：维护者构建与验证命令</summary>
 
 ```bash
-git clone --depth 1 https://github.com/Tommie-P-xl/math-worksheets-skill.git
+python tools/version.py
+python tools/version.py --tag
+python tools/package_skill.py
+python -m unittest discover -s tests -v
 ```
 
-随后告诉 Agent：`请按照 /绝对路径/math-worksheets-skill/SKILL.md 制作练习册。`
+构建输出到 `dist/`，ZIP 内只有 `math-worksheets/` 运行目录。
+GitHub Release 流程校验标签、构建安装包、运行测试后发布 ZIP 与 SHA-256 文件。
+运行完整测试需要上述 PDF 依赖；个人题库、原件与备份不进入发布包。
 
-### 运行依赖
+</details>
 
-| 工具 | 用途 |
-|---|---|
-| Bash | 执行构建流程；Windows 可使用 Git Bash 或 MSYS2 |
-| Python + SymPy ≥1.12 | 验算答案；建议使用上游评测基线版本 1.14.0 |
-| Tectonic 或 pdflatex | 编译普通 LaTeX 文档，需要 pgfplots ≥1.18 |
-| XeLaTeX 与中文字体 | 编译中文示例；本例使用 ctex 与 Fandol 字体 |
-| Poppler 的 `pdftotext` | 检查成品 PDF 中的文字位置和重叠 |
 
-```bash
-python -m pip install "sympy==1.14.0"
-```
+<p align="right"><a href="#readme-top">返回顶部</a></p>
 
-LaTeX 可以使用 [Tectonic](https://github.com/tectonic-typesetting/tectonic/releases)
-或已有的 TeX 发行版。Debian/Ubuntu 的中文编译依赖包括 `texlive-xetex`、
-`texlive-lang-chinese`；PDF 工具由 `poppler-utils` 提供。
 
-Windows 需要在 Bash 中运行脚本，并确保能找到 Python、TeX 和 `pdftotext`。
-多个 Python 并存时，用 `MWS_PYTHON` 指定已安装 SymPy 的解释器。
-中文文档可设置 `MWS_LATEX_ENGINE=xelatex`；自动模式会识别 ctex/xeCJK/fontspec 源文件。
-
-## 使用模板
-
-题目默认紧凑排列，不在题干之间留答题空间；原题中的填空位置保留。
-只有明确要求时才增加作答区域。几何字母采用透明背景，并放在不与线条相交的位置。
-
-### 通用模板
-
-```text
-使用 math-worksheets。
-模式：[新出练习题 / 复现已有题目 / 仅制作知识点总结]
-输入或主题：[知识点、粘贴的题目文字，或附上的截图/照片]
-年级和题量：[新出题时填写；复现时保留原题，不增加题目]
-语言和纸张：[中文/英文等；A4/Letter]
-交付：[练习册+简洁答案+总结 / 练习册+答案 / 仅学生练习册]
-图形：数学图形优先用程序重绘，复杂照片先询问处理方案。
-答案：独立求解、验算可计算结果，说明精简但保留关键推理。
-输出目录：[指定文件夹]
-```
-
-### 功能一使用模板：生成练习题
-
-| 场景 | 可直接复制的使用提示 |
-|---|---|
-| 正弦定理、余弦定理 | `使用 math-worksheets，给 Leo 出 8 道正弦定理和余弦定理练习，每题配图，附分步答案和知识点总结。` |
-| 小学乘法 | `给三年级学生 Lucy 制作 12 道乘法表练习，附答案册和知识点总结。` |
-| 因式分解 | `给八年级学生出 15 道三项式因式分解题，难度逐渐增加，附简洁分步解答。` |
-| 统计与数据读取 | `制作 8 道读取柱状图并计算平均数、中位数、众数和极差的题，附图表、验算答案和复习页。` |
-| 微积分 | `制作 10 道 AP 微积分链式法则练习，附分步答案和简短的求导公式总结。` |
-| 分层练习 | `围绕 8.EE.C.8 方程组标准制作基础、常规、挑战三个层次的练习册，每层单独验算并附答案。` |
-| 参考照片风格另出题 | `把这张作业照片作为风格和难度参考，另外出 10 道新的多项式图像题，使用匹配的坐标网格并附解答。` |
-
-“参考照片风格另出题”会生成**新题**；如果需要保留照片中的原题，请用下面的复现模板。
-
-### 功能二使用模板：复现与解释题目
-
-**将题目文字排成 PDF**
-
-```text
-使用 math-worksheets，把下面的题目文字整理成 A4 PDF。
-保留原题题干、数值、选项与顺序，不增加题目。
-有函数图像或几何图形时优先程序重绘，独立求解并生成简洁答案册。
-[在这里粘贴题目]
-```
-
-**复现带手写内容的截图/照片：上面的实际示例**
-
-```text
-使用 math-worksheets，将附上的几何题照片复现为中文 A4 练习册。
-保留原题三问、点名、条件与顺序，不另出题。
-区分印刷题干与手写批注，学生版不保留手写答案。
-如果重要符号或图形标注被遮挡、无法确认，先问我，不要猜。
-两幅数学图形用程序重绘。独立求解并验算，制作简洁答案册。
-最后一问增加必要的说明图，不需要知识点总结。
-全部文件保存到我指定的输出目录。
-```
-
-**只交付学生练习册**
-
-```text
-使用 math-worksheets 复现这些已有题目，只交付空白的学生练习 PDF。
-答案仍在内部独立求解和验算，但不输出答案册。
-去除手写过程，学生图中不添加答案专用的辅助线和计算结果。
-```
-
-**题干含火车、照片等复杂插图**
-
-```text
-将这道含火车/实景照片的题排成练习册，数学图形用程序重绘。
-复杂图片请先提供处理选择：我补充干净截图、可用时借助生图、
-用不影响解题的程序示意图，让我选定后再处理。
-不要根据猜测的答案补造看不清的标注或已知条件。
-```
-
-**需要图形化解释的答案**
-
-```text
-为这些函数或几何题制作简洁答案册，独立求解验算。
-涉及交点、辅助线、折叠或抽象步骤时，适当用程序加一幅说明图。
-文字只保留关键推理，答案专用信息不要出现在学生练习册中。
-```
-
-**只制作知识点总结**
-
-```text
-围绕[主题]制作两页知识点总结，包含公式、分步例题和独立尝试题。
-验算所有计算结果，不额外生成练习册。
-```
-
-## 工作方式
-
-Agent 出题或转录题目、独立求解，并写入 LaTeX 与验证 JSON。
-构建流程检查数学结果、作答项覆盖、单位、文档一致性和作答空间，
-编译 PDF 后再检查文字重叠。复现模式额外绑定题目审核记录与外部图片文件。
-
-| 模式 | 默认输出 |
-|---|---|
-| 新出题 | 练习册、答案册、知识点总结 |
-| 复现已有题目 | 练习册、答案册；总结可选 |
-| 仅学生练习册 | 学生 PDF；内部仍验算答案 |
-| 仅知识点总结 | 含已验算例题的总结 PDF |
-
-证明、开放解释、OCR 忠实度和外部图片内容仍需要审核。
-CAS 通过表示支持的数学计算通过检查，不代表每句证明和所有图形细节都已自动验证；
-图片审核记录也不等于机器证明。
+---
 
 ## 来源与许可
 
 基于 [stellawuellner/math-worksheets-skill](https://github.com/stellawuellner/math-worksheets-skill)，
 保留其数学验证器、模板和参考资料。原有预览来自上游提交 `21312be`；
 中文拍照题示例由本 fork 实际生成和检查。使用 [MIT 许可](LICENSE)。
+
+<p align="right"><a href="#readme-top">返回顶部</a></p>

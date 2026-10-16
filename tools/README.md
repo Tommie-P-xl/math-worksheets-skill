@@ -9,8 +9,22 @@ in `dist/`. The single top-level `math-worksheets/` directory is compatible with
 CC Switch's recursive SKILL.md discovery. Packaging uses an allowlist of runtime
 folders; README, tests, Git metadata and maintainer files do not enter the skill.
 
-For a release, update `metadata.version` in SKILL.md and RELEASE_NOTES.md, commit, then
-push a matching `vX.Y.Z` tag. The release workflow checks tag/version agreement,
+For a release, edit **only `metadata.version` in SKILL.md** for the version number.
+Update the prose under `# Current release` in RELEASE_NOTES.md without inserting a
+second current version literal. `tools/version.py` is the shared reader for the
+packager and release workflow; it derives the tag, Actions outputs and current
+release-note heading. Historical changelog versions are immutable records, not
+additional configuration. Python/SymPy dependency versions and the bank schema
+version are independent of the skill release version.
+
+```bash
+python tools/version.py
+python tools/version.py --tag
+python tools/package_skill.py
+```
+
+Commit the release changes, create the tag printed by `--tag` on that commit, then
+push the commit and tag. The release workflow checks tag/version agreement,
 validates runtime and package, and uploads the ZIP plus checksum. Manual dispatch
 can publish an existing matching tag. It checks out that tag, not the dispatch
 branch. Keep these maintenance instructions out of runtime SKILL.md.
