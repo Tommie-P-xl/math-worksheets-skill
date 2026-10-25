@@ -7,7 +7,7 @@
 
 <p>
   <a href="https://github.com/Tommie-P-xl/math-worksheets-skill/actions/workflows/tests.yml"><img src="https://github.com/Tommie-P-xl/math-worksheets-skill/actions/workflows/tests.yml/badge.svg" alt="Checks"></a>
-  <a href="https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest"><img src="https://img.shields.io/github/v/release/Tommie-P-xl/math-worksheets-skill?label=release&amp;color=2563eb" alt="Latest release"></a>
+  <a href="VERSION"><img src="https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2FTommie-P-xl%2Fmath-worksheets-skill%2Fmain%2FVERSION&amp;query=%24&amp;prefix=v&amp;label=version&amp;color=2563eb&amp;cacheSeconds=300" alt="Skill version from VERSION"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-64748b" alt="MIT license"></a>
 </p>
 
@@ -411,7 +411,8 @@ python SKILL_DIR/scripts/question_bank.py backup --out /chosen/path/bank.zip
 
 ## 版本与构建
 
-skill 版本号只保存在根目录 [`VERSION`](VERSION)。
+skill 版本号只保存在根目录 [`VERSION`](VERSION)。顶部徽章直接读取此文件，
+发布标签也由它派生；徽章服务可能有短暂缓存。
 [`tools/version.py`](tools/version.py) 读取它并校验发布标签。
 源文件、文档与固定名称的 `math-worksheets.zip` 不重复保存 skill 版本号，
 GitHub 发布标签与标题在发布时自动派生。
