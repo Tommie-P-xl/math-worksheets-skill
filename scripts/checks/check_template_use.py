@@ -105,7 +105,7 @@ def check(doc_tex, template_tex, template_path):
     # stub can use any of them
     for regex in (DEF_CMD, DEF_TEX):
         for m in regex.finditer(doc):
-            if m.group(1) in protected:
+            if m.group(1) in protected and m.group(1) not in {"schoolname", "mwsnamelabel", "mwsdatelabel", "mwsstemlabel", "mwsleaflabel"}:
                 faults.append(
                     f"\\{m.group(1)} is redefined here but shipped by the "
                     f"template ({template_path} defines this "
@@ -138,7 +138,7 @@ def check(doc_tex, template_tex, template_path):
 # answer key and study guide reserve nothing on the right, so they fit ~68.
 # A 10% buffer covers titles of unusually wide characters.
 HEADER_BUDGET = {
-    "wsheader": 36,   # measured 39; the tightest slot, and the common case
+    "wsheader": 60,   # no reserved name/date slot
     "akheader": 60,   # measured 68 (" --- Answer Key" already subtracted)
     "ssheader": 60,   # measured 67 ("Skills Summary: " already subtracted)
     # \skillheading had a budget in fact but not in this table, so it was the
@@ -230,8 +230,8 @@ def main():
               f"directory.", file=sys.stderr)
         return 2
 
-    doc = open(doc_path).read()
-    faults = check(doc, open(template_path).read(), template_path)
+    doc = open(doc_path, encoding="utf-8").read()
+    faults = check(doc, open(template_path, encoding="utf-8").read(), template_path)
     name = os.path.basename(doc_path)
     print(f"Template-use report: {doc_path}")
     if not faults:
@@ -265,13 +265,12 @@ def main():
   Start {name} with the shipped shell (SKILL.md step 3):
 
     \\documentclass[12pt]{{article}}
-    \\usepackage[margin=1in, top=0.75in, bottom=0.75in]{{geometry}}  % ss_: margin=0.85in, top/bottom 0.7in
     \\input{{worksheet-preamble}}
     \\input{{figure-macros}}    % when using the shipped figure macros
 
   compile.sh stages worksheet-preamble.tex and figure-macros.tex beside your
-  .tex automatically, so /tmp compiles just work. Only geometry stays in the
-  document. The shipped shell carries \\fittedtitle overflow protection, the
+  .tex automatically. Margins come from the global config.json.
+  The shipped shell carries \\fittedtitle overflow protection, the
   workspace-in-minipage \\problem semantics, and the exact environment names
   the downstream gates bind to — a hand-rolled preamble drifts where CI
   (no LaTeX engine) cannot see.""")

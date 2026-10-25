@@ -41,7 +41,7 @@ def main():
         return 2
     tex_path, ws_path = sys.argv[1], sys.argv[2]
     ss_path = sys.argv[3] if len(sys.argv) == 4 else None
-    ws = json.load(open(ws_path))
+    ws = json.load(open(ws_path, encoding="utf-8"))
     if not ws.get("facets"):
         print("no facet plan — nothing to check")
         return 0
@@ -50,7 +50,7 @@ def main():
                  if isinstance(p, dict) and p.get("facet")}
 
     if ss_path is not None:
-        ss = json.load(open(ss_path))
+        ss = json.load(open(ss_path, encoding="utf-8"))
         ss_facets = {p.get("facet") for p in ss.get("problems", [])
                      if isinstance(p, dict) and p.get("facet")}
         if not ss_facets:
@@ -75,7 +75,7 @@ def main():
 
     subtitle = ws.get("subtitle")
     if subtitle:
-        tex = open(tex_path).read()
+        tex = open(tex_path, encoding="utf-8").read()
         # The title block is everything before the first problem — searching
         # the whole file would let a subtitle buried in a stem count.
         m = re.search(r"\\problem\b|\\begin\{enumerate\}", tex)

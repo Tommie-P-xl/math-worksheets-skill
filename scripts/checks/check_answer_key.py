@@ -449,8 +449,8 @@ def main():
     # comments are blanked (length-preserving) so a commented-out \boxed or
     # '% \problem{...}' remark can neither count as an answer nor split a
     # segment; spans from segment_spans stay valid against this text
-    tex = blank_comments(open(sys.argv[1]).read())
-    data = json.load(open(sys.argv[2]))
+    tex = blank_comments(open(sys.argv[1], encoding="utf-8").read())
+    data = json.load(open(sys.argv[2], encoding="utf-8"))
     boxes = boxed_answers(tex)
     spans = segment_spans(tex)
 

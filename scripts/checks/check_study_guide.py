@@ -110,8 +110,8 @@ def main():
         print("Usage: check_study_guide.py <ss_*.tex> <verify_ss_*.json>",
               file=sys.stderr)
         sys.exit(2)
-    tex = blank_comments(open(sys.argv[1]).read())
-    data = json.load(open(sys.argv[2]))
+    tex = blank_comments(open(sys.argv[1], encoding="utf-8").read())
+    data = json.load(open(sys.argv[2], encoding="utf-8"))
     by_id = {}
     for e in data.get("problems", []):
         if isinstance(e, dict) and isinstance(e.get("id"), int):

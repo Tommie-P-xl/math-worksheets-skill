@@ -1,8 +1,8 @@
 # New problem authoring
 
 Before designing new/similar questions, follow [question-bank.md](question-bank.md):
-extract the source demand, retrieve at most 10 bank questions/guide documents in
-total, then use available official web references only when local context is
+extract the source demand, read the live config and retrieve at most `reference_limit` distinct bank questions/guide documents in
+total (default 10), then use available official web references only when local context is
 inadequate. Ask individually before archiving uploads, outputs or guide changes;
 declining archival never blocks authoring. For Chinese curricula, align to the
 confirmed taught scope rather than forcing an unrelated CCSS/AP grade label.
@@ -26,11 +26,11 @@ Applies to newly designed worksheets. For source reproduction, read reproduction
 ### 1. Gather requirements
 
 Ask (or infer from context):
-- **Student**: name, grade, course (e.g. "8th grade, Pre-Algebra")
+- **Student**: grade, course (e.g. "8th grade, Pre-Algebra")
 - **Topic**: e.g. "factoring trinomials", "solving two-step equations"
-- **Problem count**: default 10 if not specified
+- **Problem count**: use `default_question_count` from config (default 10) if unspecified
 - **Page use**: the page budget is COMPUTED from the problem set (`scripts/page_budget.py`), not fixed. Fifty graphing problems that each need a coordinate plane legitimately run past 20 pages and are allowed to; a flat cap could only be met by shrinking the work space, which is the one thing that must never give. `build.sh` prints the ideal page count and the double-sided sheet count before compiling, so paper cost is visible. If a set is bigger than intended, reduce the PROBLEM COUNT, never the work space. Hard ceiling: 100 problems — past that, split into several worksheets
-- **Paper size**: US Letter by default. For A4 or Legal, add the paper as a documentclass option (`\documentclass[12pt,a4paper]{article}`) with metric geometry margins, and pass `--paper a4` to `page_budget.py`. See `references/latex-templates.md` → "Paper size"
+- **Paper size**: infer the regional/user preference; use A4 for Chinese requests. For A4 or Legal, add the paper as a documentclass option (`\documentclass[12pt,a4paper]{article}`) with the configured margins, and pass `--paper a4` to `page_budget.py`. See `references/latex-templates.md` → "Paper size"
 - **Accessibility**: for large-print or dyslexia-friendly output use `\documentclass[17pt]{extarticle}` (or 14pt) plus `\accessiblemode{large|dyslexia|both}`. The page budget adapts automatically; larger type simply means more pages. See `references/latex-templates.md` → "Accessibility"
 - **Locale**: `\mwslocale{eu}` prints decimal commas and `\times`. The verify JSON stays canonical (period decimals) — only the printed form is localised, via `\dec{}` and `\mtimes`. Pair this with A4 paper for European users
 - **Format preference**: timed quiz, homework practice, mixed difficulty, or topic drill.
@@ -48,7 +48,7 @@ Design problems appropriate to the student's level. Increase difficulty graduall
 
 See `references/problem-library.md` for topic-specific problem type menus.
 
-**The grade level never prints on the worksheet or the study guide.** `\wstitleblock` takes a course argument and does not typeset it: a child working a grade below or above reads the label before the mathematics, and it tells the student nothing they need. The level is the adult's information, so it prints on the ANSWER KEY — in the title block and again in a generated **Curriculum** section beside the standards codes and the difficulty range, which is where a parent or teacher actually looks. Keep passing the course argument: it is the one place the level is declared, and the answer key's curriculum section reads it from there.
+Print only the requested titles and labels in the document language. Keep unrequested grade, standards and verification metadata in the source data/reports.
 
 **Tag every problem** with `"standard"` (a code from `references/standards-map.md` — never invent codes, and **grep that file before concluding it lacks a row**: 11 reviewed cases asserted a missing row that was there, two of them naming the exact code they called absent, and then tagged a high-school sheet with a grade-8 standard), `"difficulty"` (1–5 per that file's ladders), `"bloom"` (recall/apply/analyze/justify, same file), and `"skill"` (a short stable name for the skill the problem exercises, e.g. `"right-triangle-trig"` — reuse the same name across problems of the same Part). Skill tags are all-or-nothing and GATING: the study guide must contain an entry tagged with each distinct worksheet skill, enforced by `build.sh`'s `coverage-ss` gate; a partially tagged sheet fails it. Ramp difficulty: start at 1–2, majority 2–3, end with one or two 4–5 challenges. Verification reports standards coverage, the bloom mix, the skill mix (the set the study guide must cover), and flags ramp drops, so a parent can see exactly which standards the sheet exercises and at what cognitive level.
 
@@ -56,7 +56,7 @@ See `references/problem-library.md` for topic-specific problem type menus.
 
 **Interleave after the warm-up:** a blocked warm-up over the first third of the sheet is fine; after that, keep same-facet runs to 3 or fewer so the student must *choose* the method — unless the sheet is genuinely a drill, declared with top-level `"format": "drill"`. `verify.py` flags longer runs (exit 2, manual review) with a concrete swap suggestion. See `references/problem-library.md` → "How to interleave".
 
-**Misconception traps:** consult the misconception table (`references/problem-library.md` → "Misconception traps & error analysis") when choosing givens — pick numbers so the canonical wrong method lands visibly off the correct answer — and declare `"traps"` on the 2–3 problems you designed that way. Traps are optional, but declared ones are machine-checked (step 4) AND printed in the answer key as a "Common wrong answers" block (`scripts/render_quick_answers.py` emits one `\commonerror` line per trap, so the grader sees "If they got 7.37: used cos instead of tan"). Declaring traps therefore pays twice: it hardens the problem design and it turns grading into teaching.
+**Misconception traps:** optional verification data for anticipated wrong methods. Check declared traps; print an error-analysis section only when requested.
 
 **Tiered worksheets (differentiation, on request):** when asked for tiers (support/on-level/challenge), build ONE set of problem skeletons, then re-parameterize per tier — same structure and standards, different givens and difficulty band (support: 1–2 with a hints box and a worked first step; core: 2–3; challenge: 3–5). Each tier gets its OWN verify JSON (the gate re-checks every tier) and file prefix: `wsS_`/`wsC_`/`wsX_` + matching keys. Because construction is JSON-first, a tier is a data change, not a rewrite.
 
@@ -70,8 +70,8 @@ quotients in answer text with fully braced LaTeX fraction commands. See
 [solutions.md](solutions.md) for scope and examples; computation/JSON syntax
 continues to use ordinary division operators.
 
-Write **three** `.tex` files to `/tmp/`:
-- `ws_TOPIC_DATE.tex` — student worksheet (blank work areas)
+Write the requested `.tex` files to a cross-platform work directory:
+- `ws_TOPIC_DATE.tex` — student worksheet (compact by default)
 - `ak_TOPIC_DATE.tex` — answer key (full step-by-step solutions)
 - `ss_TOPIC_DATE.tex` — skills summary / study guide (cheat sheet)
 
@@ -82,7 +82,7 @@ The **skills summary** is a reference card (2 pages by default — see "Length" 
 - **`\why{...}`** (optional, at most one per example) prints a one-line self-explanation aside after a step — *the reason the move is legal*, not a restatement of it. A printed model of self-explanation teaches the habit the research prompts train. Keep it conceptual and number-free; the prose checker reads any numbers in it against the entry.
 - **`\fadestep{...}`** (optional, inside a try-it) turns it into a completion problem: the setup shown ("Started for you: …"), the finish left to the student. Backwards-fading measurably beats the straight example-to-problem jump **on multi-step skills** — use it when the example needed 3+ computational steps, skip it on one-move skills where the bare try-it is the right next step. End the box with the check answer right-aligned: `\hfill\rotatebox{180}{\footnotesize check: $\ans{...}$}`.
 - **Dual coding:** when a skill is spatial (trig ratios, transformations, area models, number lines), put a small **value-free** diagram in its formulabox next to the rule, built from the shipped figure macros or house styles — a rule the student can *see* is retained better than the same rule in symbols alone. Value-free, so the figure-scope rules never apply; budget for it via "pages" below if two diagrams push past the default.
-- Boxes carry printed title tabs (RULE / EXAMPLE / TRY IT / WATCH OUT) so a student scanning for the formula finds it without reading — do not add your own headings inside boxes.
+- Boxes have no fixed printed labels. Add only useful localized headings.
 
 It contains:
 **Length.** The default budget is **2 pages**, and the discipline of the small page is most of what makes a reference card one. Declare a top-level `"pages"` (integer 1–6) in the verify_ss JSON only when (a) diagrams the skills genuinely need — a unit circle, a transformation grid, labelled solids — do not fit the default, or (b) the user asked for a longer guide. `verify.py` validates the field; `build.sh` reads it for the compile-ss page cap. The five-full-sections ceiling below scales with it: about 2–3 full sections per page.
@@ -123,24 +123,19 @@ See `references/latex-templates.md` for document templates, coordinate planes, t
 
 `forest`, `tikz-cd`, `circuitikz`, `chemfig` and `quantikz` are deliberately NOT loaded — see the reasons in `templates/worksheet-preamble.tex`. Factor trees and probability trees, the one genuinely mathematical case, draw fine with TikZ's built-in `child` syntax at no extra load cost.
 
-**Answer-key shell:** the `ak_` document starts exactly like the worksheet
-(`\input{worksheet-preamble}`), then `\akheader{TOPIC}` + `\aktitleblock{...}`, and ONE
-`\input{qa_TOPIC_DATE}` line directly under the title block — the build driver's
-quick-answers gate regenerates that bank from the verify JSON every build and **fails a
-key that hand-rolls its preamble or never `\input`s the bank** (both messages teach the
-fix). `\akheader` switches `\ans{...}` to a compact same-line box, so end each worked
-solution's last step with `\ans{x = 5.00}`; keep the display `\[ \boxed{...} \]` form
-for long or multi-value answers. See `references/latex-templates.md` → "Answer Key
-Patterns".
+**Answer-key shell:** `\input{worksheet-preamble}` followed by the requested
+localized title and checked solutions. Quick-answer tables are optional and
+controlled by `quick_answers` (default false). Existing `\input{qa_STEM}` lines
+remain supported; the file is refreshed without printed content when disabled.
+Use `\ans{...}` or `\boxed{...}` for checked final answers.
 
 **Preamble — \input the shipped template, never retype it.** Start every document with:
 ```latex
 \documentclass[12pt]{article}
-\usepackage[margin=1in, top=0.75in, bottom=0.75in]{geometry}  % ss_: margin=0.85in, top/bottom 0.7in
 \input{worksheet-preamble}
 \input{figure-macros}    % when using the shipped figure macros (\rtfig, \trifig, \refrt)
 ```
-`$SKILL_DIR/templates/worksheet-preamble.tex` carries the packages, `\problem`, `\fittedtitle`, the `\wsheader`/`\akheader`/`\ssheader` + title-block macros, and the study-guide box environments; `templates/figure-macros.tex` carries the figure macros. `compile.sh` (and therefore `build.sh`) stages both files beside your `.tex` automatically, so `/tmp` compiles just work — but only when you compile through the scripts, never by invoking the engine directly. Only `geometry` stays in the document (margins differ between worksheets and study guides). `build.sh` enforces this mechanically — the `template-ws`/`template-ak`/`template-ss` gates (`scripts/checks/check_template_use.py`) fail any document that hand-rolls its shell, `\input`s a non-shipped preamble file, or redefines a shipped macro/environment/color.
+`$SKILL_DIR/templates/worksheet-preamble.tex` carries the packages, `\problem`, `\fittedtitle`, the `\wsheader`/`\akheader`/`\ssheader` + title-block macros, and the study-guide box environments; `templates/figure-macros.tex` carries the figure macros. `compile.sh` (and therefore `build.sh`) stages both files beside your `.tex` automatically, so `/tmp` compiles just work — but only when you compile through the scripts, never by invoking the engine directly. The shared preamble reads margins from the global config; do not duplicate geometry settings. `build.sh` enforces this mechanically — the `template-ws`/`template-ak`/`template-ss` gates (`scripts/checks/check_template_use.py`) fail any document that hand-rolls its shell, `\input`s a non-shipped preamble file, or redefines a shipped macro/environment/color.
 
 **Work space:** use `\problem{...}` without reserved space by default.
 For an explicit writing-space request, declare `\worksheetlayout{spacious}`;
@@ -259,7 +254,7 @@ Before compiling, write `/tmp/verify_TOPIC_DATE.json` — a structured data file
 - `verify.py` hard-fails unless every problem id 1..N has at least one check. This counts **problems**.
 - `scripts/checks/check_answer_slots.py` hard-fails unless every id has **one entry per response the problem asks for** — every printed `\ansline`/`\ansblank`/`\answerline`, and every lettered `(a)`/`(b)`/`(c)` sub-part in the stem. This counts **answers**.
 
-**The answer key reads: header, Quick Answers, worked solutions — then a final page of its own.** The generated bank emits the verification and curriculum summaries (and the common-wrong-answers table) via `\AtEndDocument`, so they claim the LAST page automatically; the `ak_` author writes nothing extra and the one-`\input` contract is unchanged. Answer keys also breathe by design: `\akheader` switches on rubber inter-problem space, `\raggedbottom`, and a small stretchable `\parskip` — the key's reader is a grader scanning solutions, and a page set solid reads as a wall. The worksheet keeps its measured fixed layout (work space there is a promise to the student).
+**Answer-key content:** requested title and complete worked solutions. Do not append verification, curriculum, common-error or other report pages unless requested.
 
 **The answer key says what it can and cannot vouch for.** Its Quick Answers bank has three states, and a "What is verified" note names the problems in each: a plain value is machine-checked; `$\spadesuit$` (a spade — chosen because no maths in these documents uses the glyph, where the old `---` sat one glyph from a minus sign) marks an answer only the instructor can judge, with the worked solution stating what a correct response must contain; and **`[unchecked]`** marks a problem printing more responses than the verification covers, where at least one printed answer carries no guarantee. The note is silent on a fully verified sheet — a legend explaining marks that never appear is the noise that makes real warnings invisible. Aim for a key with no `[unchecked]` marks; when one is unavoidable, the instructor at least knows where to look instead of trusting a complete-looking column.
 
@@ -469,7 +464,7 @@ That single command replaces what used to be nine separate steps. It discovers `
 3. `check_facet_coverage.py` — every worksheet facet must have a study-guide worked example tagged with it, and a declared `"subtitle"` must appear verbatim in the worksheet title block (no-op for sheets without a facet plan)
 4. figure rendering (when shipped and the JSON has figure/triangle problems)
 5. effort-marker rendering (`render_meta.py`, when the sheet uses `\probmeta`/`\probpts` or every problem is difficulty-tagged)
-6. quick-answer bank regeneration (`render_quick_answers.py` on the answer key — every build, with the two preflight teaching failures)
+6. refresh optional quick-answer output (empty by default; no report appendix)
 7. `check_layout.py` on the worksheet (figure scope + work space + answer location)
 8. `check_answer_line.py` on the worksheet (`answer_unit` ↔ `\answerline`)
 9. `compile.sh` for all three documents (nothing compiles after a failed gate). Each compile enforces a **page budget** read from the engine's own `Output written ... (N pages` log line (`check_log.py --max-pages`). The study guide is hard-capped at **2 pages** — it is a reference card and that cap is fixed. The worksheet and answer-key caps are **computed per sheet** by `page_budget.py` from the problem set, the declared `workspace_cm`, the paper size and the type size read off the `.tex` (`--from-tex`, so large-print sheets get their extra pages without anyone remembering a flag): 50 graphing problems that each need a plane are allowed 26, not squeezed into a flat number. `8`/`6` appear in `build.sh` only as the fallback when `page_budget.py` itself cannot run. Over budget means the sheet overran *its own measured* budget — a layout accident, not a bigger worksheet. Fix it by cutting optional sections, declaring the real `workspace_cm`, or reducing the problem count; never by shrinking work space
@@ -477,7 +472,7 @@ That single command replaces what used to be nine separate steps. It discovers `
 11. `check_study_guide.py` — every worked example opens with a `\step` strategy line before any computation
 12. `check_prose_consistency.py` on the worksheet AND the study guide (`--figs`/`--meta` passed automatically; examplebox prose givens are bound to the ss JSON; intermediate values that equal a subexpression of the entry's expr at printed precision are auto-matched; story numbers unused by the computation are expected flags)
 
-It ends with a gate-summary table and ONE verdict line. Exit 0 = all green with three PDF paths printed; exit 1 = a gate failed (named — fix and re-run); exit 2 = green with manual-review items. **Missing `ak_`/`ss_` documents are failures, not skips** — the skill mandates three documents (`--worksheet-only` exists for the rare single-document request). Default output directory is `~/Documents/Worksheets/` (`--outdir` to override; see the Prerequisites note about headless environments).
+It ends with a gate-summary table and ONE verdict line. Exit 0 = all green with three PDF paths printed; exit 1 = a gate failed (named — fix and re-run); exit 2 = green with manual-review items. The selected output mode determines required documents; honor explicit worksheet-only or no-study-guide requests. Default output directory is `~/Documents/Worksheets/` (`--outdir` to override; see the Prerequisites note about headless environments).
 
 Why the checkers exist (`build.sh` runs them for you):
 

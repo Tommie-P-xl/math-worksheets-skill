@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tag to publish (must match SKILL.md version)
+        description: Existing tag to publish (must match VERSION)
         required: true
         type: string
 permissions:
@@ -42,4 +42,4 @@ jobs:
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --notes-file "$RUNNER_TEMP/release-notes.md" --latest
           fi
-          gh release upload "$RELEASE_TAG" dist/*.zip dist/*.sha256 --clobber
+          gh release upload "$RELEASE_TAG" dist/math-worksheets.zip dist/math-worksheets.zip.sha256 --clobber

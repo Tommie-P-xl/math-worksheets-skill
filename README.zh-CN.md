@@ -52,7 +52,7 @@
 
 | 1 · 安装 Skill | 2 · 准备运行环境 | 3 · 交给 Agent |
 |---|---|---|
-| 从 [Releases](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest) 下载 `math-worksheets-v*.zip`，通过 CC Switch 或手动安装。 | 仅管理题库需要 Python；生成 PDF 还需要 Bash、SymPy、LaTeX 和 Poppler，[完整依赖见下文](#运行依赖)。 | 说明知识范围、数量、语言与交付物，或提供题目照片并指定复现。 |
+| 从 [Releases](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest) 下载 `math-worksheets.zip`，通过 CC Switch 或手动安装。 | 仅管理题库需要 Python；生成 PDF 还需要 Bash、SymPy、LaTeX 和 Poppler，[完整依赖见下文](#运行依赖)。 | 说明知识范围、数量、语言与交付物，或提供题目照片并指定复现。 |
 
 ```text
 使用 math-worksheets，参考我上传的题目，出 4 道同类型的新题。
@@ -107,7 +107,7 @@
 ### 方式一：使用 CC Switch 安装 ZIP
 
 1. 打开 [Releases](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest)，
-   下载名称为 **`math-worksheets-v*.zip`** 的附件。
+   下载名称为 **`math-worksheets.zip`** 的附件。
 2. 打开 **CC Switch → Skills → 从 ZIP 安装**，选择下载的 ZIP。
 3. 将技能启用或同步到 Claude Code、Codex 等需要使用的 Agent。
 4. 按下面的说明准备运行依赖。若 Agent 尚未显示该技能，重启，或直接指定安装目录的 `SKILL.md`。
@@ -141,7 +141,7 @@ git clone --depth 1 https://github.com/Tommie-P-xl/math-worksheets-skill.git
 | 工具 | 用途 |
 |---|---|
 | Bash | 执行构建流程；Windows 可使用 Git Bash 或 MSYS2 |
-| Python + SymPy ≥1.12 | 验算答案；建议使用上游评测基线版本 1.14.0 |
+| Python ≥3.10 + SymPy ≥1.12 | 验算答案；建议使用上游评测基线版本 1.14.0 |
 | Tectonic 或 pdflatex | 编译普通 LaTeX 文档，需要 pgfplots ≥1.18 |
 | XeLaTeX 与中文字体 | 编译中文示例；本例使用 ctex 与 Fandol 字体 |
 | Poppler 的 `pdftotext` | 检查成品 PDF 中的文字位置和重叠 |
@@ -313,200 +313,112 @@ CAS 通过表示支持的数学计算通过检查，不代表每句证明和所�
 
 ## 全局题库
 
-题库帮助 Agent 判断“应该出什么类型的题目，以及如何控制难度”。题目与命题经验独立于
-项目和 skill 目录存储，跨项目复用。存储工具只用 Python 标准库与 SQLite，无需数据库
-服务器、额外模型订阅、向量服务或后台进程。实际生成 PDF 时仍需原有的数学与排版依赖。
+题库使用 **纯文本与代码题库**：每题保存完整题面、答案、逐步解答、标签、
+难度分析、语义图形条件与 TikZ/pgfplots/SVG 绘图代码。函数图像和辅助线也用
+代码描述，AI 读取文字即可理解参考题，无需再打开图片。
+照片仍可作为本次整理的输入；题库仅保存原文件名、题号/页码、哈希或 URL 等
+来源信息，不复制原图。全局数据不会打入安装包。
 
-### 架构与数据分工
+每道题仍需用户确认后收录。入库或修订后，Agent 检查对应命题指南：有新的
+可复用方法就提出精简更新并取得批准；现有内容已覆盖时，记录检查结论。
+`guide-status` 按题目 ID 与修订版本显示尚未审阅的记录，避免指南长期漏更新。
+指南仍是每个学段/学科唯一、可直接编辑的 Markdown 文件。
 
-```mermaid
-flowchart LR
-    A["Agent 命题流程"] --> B["SKILL.md 与参考说明"]
-    B --> C["question_bank.py"]
-    C --> D[("SQLite 题目与历史")]
-    C --> E["可编辑命题文档"]
-    C --> F["原件、配置与备份"]
-    D --> G["精简参考包"]
-    E --> G
-    G --> H["设计、求解与验证"]
-```
+### 数据位置与实时配置
 
-<details>
-<summary>展开：目录结构与数据流明细</summary>
-
-```text
-skill 安装目录                         用户全局数据目录
-SKILL.md + references                  bank.sqlite
-    │ 流程与确认规则                      ├─ problems：题目文本/JSON、版本
-    ▼                                     ├─ tags：关联题目 ID 的标签索引
-scripts/question_bank.py ──────────────►   ├─ guides：文档标识、哈希、来源
-    │ 校验、检索、持久化                  └─ events：已批准修改的前后记录
-    │                                  guides/学段/学科.md
-    │                                     └─ 当前命题文档，可直接编辑
-    │                                  sources/内容哈希.扩展名
-    │                                     └─ 批准后保存的原件，按内容去重
-    │                                  config.json + backups/
-    ▼
-精简参考包 → 设计新题 → 独立求解 → 原有数学校验与 PDF 构建
-```
-
-</details>
-
-
-| 组成 | 存什么、如何约束 |
-|---|---|
-| `problems` | 每题一个稳定 ID 和唯一内容指纹；题干、答案、步骤、难度特征、图形描述、来源与版本以文本/JSON 保存。年级、答案不会形成第二份题目身份。 |
-| `tags` | 标签关联题目 ID 并建立检索索引。**每道题的每类标签最多 5 个**；同题可兼有多个年级和考试标签。上限针对单题，不是整个题库只能有 5 个知识点。 |
-| `guides` | 以 `(学段, 学科)` 为唯一键，保存固定文件路径、内容哈希、版本和调研来源。学段仅允许**小学、初中、高中**。 |
-| `guides/学段/学科.md` | 当前命题文档的正文，以文件为准，例如 `guides/初中/数学.md`。知识点作为文档内的小节，用户直接修改后立即读取，不必重新导入。SQL 元数据与历史不会覆盖文件正文。 |
-| `events` | 已批准写入的确认说明、摘要及修改前后记录，用于追溯；不用于偷偷保存待确认题目。 |
-| `sources/` | 只有批准后才复制原件。页码/题号定位用于区分同一张扫描图中的不同题目，哈希用于原件去重和损坏检测。 |
-
-数学公式使用 LaTeX 文本；图形可保存“数学条件＋TikZ/pgfplots/SVG 代码”，将绘图坐标、
-答案专用辅助线与原题已知条件分开。题库工具不会执行保存的绘图代码。SQLite 文件本身
-是二进制，但题目内容仍是文本；Agent 通过脚本获取精简 JSON，不读取整个数据库文件。
-
-### 题目收录与确认流程
-
-```mermaid
-flowchart TD
-    A[上传题目或新题草稿] --> B[核对题干、独立求解、建议标签与难度特征]
-    B --> C[preview 校验、原件哈希、重复候选检查]
-    C --> D{用户确认收录此题及其基础信息?}
-    D -->|拒绝或未回复| E[只留在当前工作中，不收录]
-    D -->|明确同意| F[commit 检查批准摘要与当前版本]
-    F --> G[写入前执行自动备份策略]
-    G --> H[新增、合并或修订一条记录并记录批准历史]
-```
-
-Agent 必须逐题展示建议的学段、年级/考试、知识点、题型，询问是否收录及信息是否准确。
-用户可修改或拒绝。生成的新题、命题文档更新都需分别确认，不能用“同意这一题”代替
-其他项目的批准。入库确认尚未完成，不影响已经授权的正常出题。
-
-`preview` 不写全局待办记录、不复制原件，生成的 SHA-256 摘要绑定当前草稿、原件字节和
-目标记录版本。`commit` 需要该摘要与用户确认说明，草稿变化或版本过期会被拒绝。
-摘要防止意外提交过期内容；**Agent 仍必须取得真实的用户回复，不能自行编造批准说明。**
-
-内容完全匹配或来源中的同一题会指向已有记录，批准后的年级/考试标签及来源合并到该题。
-答案冲突需要明确修订。相近文本作为候选交给用户判断，不能宣称已自动证明两题数学等价。
-合并后标签超过 5 个会报错，须提出准确的概括标签供用户确认，不会静默删减。
-
-### 检索参考与出题流程
-
-1. 先确认实际教学范围，提取**知识跨度、关键推理步数估计、方法隐蔽程度、计算量、
-   分类讨论负担、提示程度、难度判断及依据**。预估与学生实际作答结果分开，认知层级
-   标签不能直接当成校准后的得分率。
-2. 用 `context` 指定学段、学科及相关年级/知识点。SQLite 标签索引先筛选，再以文本匹配
-   排序题目，并选择相关命题文档段落。默认 **5 项参考**，题目与文档合计最多 **10 项**；
-   默认输出预算 **10000 字符**，不等于精确 token 数。截短字段会明确标记，需要时再
-   读取已选题目的完整解答或图形代码。
-3. 已有适用参考就直接复用；缺少或内容不足时，借助 Agent 可用的联网工具简查官方
-   课程/命题资料。无关的通用文档不会被当成主题资料充分。没有联网能力时说明尚未核定的
-   范围假设。脚本本身不自动联网。
-4. 制定简短命题计划：考查点、题型结构、关键推理、小问衔接、评分点和难度调整方式。
-   先求解再完善题面，检查所有分支、已学方法、最值是否能在允许位置取得，再接入原有
-   `verify.py` 与 PDF 构建检查。
-5. 如需留存新题或研究总结，再提交可审核的草稿。命题文档记录来源链接、核对日期和
-   适用范围；下次适用时直接复用。考试年份或范围变化等时效性要求仍应重新核对。
-   保存或替换研究总结之前必须获得用户批准。
-
-Agent 应按整个出题请求累计不同题目/文档数量，后续调用不能重置 10 项上限。
-这套机制改善的是参考上下文与命题流程，不会自动训练模型参数，也不保证教育质量。
-计算结果、几何证明、原题忠实度与课堂适配仍要分别检查。
-
-### 默认位置、配置与卸载重装
-
-所有项目按同一顺序选择数据目录：**命令行 `--home` → 环境变量 `MWS_DATA_HOME` →
-操作系统默认值**。读取不存在的题库会返回空，不创建目录。
-
-| 系统 | 默认数据目录 |
-|---|---|
-| Windows | `%LOCALAPPDATA%\MathWorksheets`，通常是 `C:\Users\<用户名>\AppData\Local\MathWorksheets` |
+| 系统 | 默认位置 |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%/MathWorksheets` |
 | macOS | `~/Library/Application Support/MathWorksheets` |
 | Linux | `${XDG_DATA_HOME:-~/.local/share}/math-worksheets` |
 
-数据库文件是该目录中的 `bank.sqlite`。用 `stats` 查看**实际解析后的绝对路径**：
-Windows 打包应用或重定向环境可能把 AppData 映射到其他物理位置。仓库与安装 ZIP 不包含
-个人题库或某台电脑专用的绝对路径。
+`MWS_DATA_HOME` 或 `--home` 可指定位置；数据位于 skill 安装目录之外，重装不会覆盖。
+运行 `config --init` 可生成完整 `config.json`。常用数值与开关集中在这个文件，
+修改后下一次命令或构建立即生效，详见[配置说明](references/configuration.md)。
 
-**只删除、更新或重新安装 skill，不会删除数据库、原件、命题文档或备份。**重新安装后
-继续使用同一数据目录即可读取原数据。如果切换用户、运行环境或自定义路径，应让
-`MWS_DATA_HOME` 指向旧目录，或从备份恢复；新目录显示为空不代表旧数据被删除。
-删除数据目录、清理宿主应用数据是另一个操作，不属于“仅重装 skill”的保留范围。
+配置文件保持标准JSON格式；`_comments`为每个参数提供中文简要说明和默认值，
+读取配置时只使用实际参数值。运行`config --init`可补齐参数、刷新说明，并保留
+已有有效设置；旧的不带说明的配置仍可读取。
 
 <details>
-<summary>展开：固定目录、迁移方法与长度配置</summary>
+<summary>全部配置参数、默认值与作用</summary>
 
-若要固定跨项目使用的位置，请在运行 Agent 的各环境中设置相同的 `MWS_DATA_HOME`。
-以下 PowerShell 示例假定 `D:\MathWorksheetsData` 已是你的数据目录，或你打算在此新建题库：
-
-```powershell
-$env:MWS_DATA_HOME = 'D:\MathWorksheetsData'
-```
-
-**设置环境变量只改变路径选择，不自动迁移旧数据。**迁移应先备份旧库，恢复到不存在或
-空的新目录，校验后再更新各环境的变量。当前会话变量不是永久系统设置。其他电脑或云端
-Agent 还需显式传输数据，或另行设计同步。
-
-`config.json` 默认内容为：
-
-```json
-{"guide_max_chars":6000,"backup_keep":7}
-```
-
-每个学段学科文档默认最多 **6000 个 Unicode 字符**，包含标题与链接，可调整为
-500–12000 字符。提交和直接编辑后的读取都检查上限；超长会提示文件路径，须缩写或调整
-配置，不会截掉末尾文字，也不会自动拆成多个知识点文档。
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `guide_max_chars` | `6000` | 单份学段/学科命题指南的字符上限，含标题和链接；范围500–12000。 |
+| `backup_keep` | `1` | 自动备份保留代数，范围1–100；手动备份不自动删除。 |
+| `auto_backup_enabled` | `true` | 是否在写入前自动备份上一代已提交数据。 |
+| `reference_limit` | `10` | 每次命题可参考的不同题目和指南总上限，范围1–100。 |
+| `reference_default` | `5` | 单次检索默认返回的参考数量，包含指南；不得大于reference_limit。 |
+| `context_max_chars` | `10000` | 单次检索结果的默认字符预算，至少1200且不超过context_max_chars_limit。 |
+| `context_max_chars_limit` | `50000` | 允许指定的检索字符预算上限，不超过1000000。 |
+| `guide_excerpt_chars` | `2400` | 检索结果中命题指南节选的字符上限。 |
+| `stem_excerpt_chars` | `1600` | 检索结果中每题题面节选的字符上限。 |
+| `answer_excerpt_chars` | `500` | 检索结果中每题答案节选的字符上限。 |
+| `solution_excerpt_chars` | `900` | 检索结果中每题解答节选的字符上限；完整内容用show读取。 |
+| `givens_excerpt_chars` | `1200` | 检索结果中每题图形已知关系节选的字符上限。 |
+| `duplicate_threshold` | `0.82` | 疑似重复题的文本相似度阈值，大于0且不超过1。 |
+| `duplicate_scan_limit` | `300` | 检查疑似重复题时比较的最近题目数量。 |
+| `duplicate_candidate_limit` | `5` | 预览时最多显示多少个疑似重复题候选。 |
+| `guide_review_on_commit` | `true` | 题目入库或修订后是否要求Agent检查命题指南覆盖情况。 |
+| `default_question_count` | `10` | 用户未指定数量时，Agent默认生成的练习题数。 |
+| `page_margin_left_mm` | `12` | PDF正文左页边距，单位毫米；范围5–50。 |
+| `page_margin_right_mm` | `12` | PDF正文右页边距，单位毫米；范围5–50。 |
+| `page_margin_top_mm` | `12` | PDF正文上页边距，单位毫米；范围5–50，启用页眉时需留足空间。 |
+| `page_margin_bottom_mm` | `12` | PDF正文下页边距，单位毫米；范围5–50。 |
+| `page_numbers` | `true` | 是否显示模板页码。 |
+| `name_date_fields` | `false` | 是否显示首页姓名/日期填写栏；栏名由文档按所用语言提供。 |
+| `header_rule` | `false` | 是否显示页眉下方的分隔横线。 |
+| `quick_answers` | `false` | 是否生成答案速查表；不自动追加验证或课程总结页。 |
+| `problem_gap_mm` | `1.5` | 紧凑排版时题目之间的间距，单位毫米，可使用小数。 |
+| `answer_problem_gap_mm` | `2` | 答案册相邻题目之间的间距，单位毫米，使用正整数。 |
 
 </details>
 
-### 查看、维护与备份
+自动备份在每次写入前保存上一代状态，按配置保留代数；手动命名的备份不自动删除。
+备份包含数据库、指南、配置和校验清单，不含图片。
 
-可以直接对 Agent 说“查看题库存量和占用”“打开初中数学命题文档”“导出题库”或
-“备份题库”。如需直接运行，将 `PATH_TO_SKILL` 替换为安装路径：
+### 升级已有题库
 
-```powershell
-python PATH_TO_SKILL/scripts/question_bank.py stats
-python PATH_TO_SKILL/scripts/question_bank.py doctor
-python PATH_TO_SKILL/scripts/question_bank.py context --stage 初中 --subject 数学 --topic 相似三角形 --limit 5
-python PATH_TO_SKILL/scripts/question_bank.py guide-show --stage 初中 --subject 数学
-python PATH_TO_SKILL/scripts/question_bank.py export --out D:/Exports/math-bank.jsonl
-python PATH_TO_SKILL/scripts/question_bank.py backup --out D:/Backups/math-bank.zip
-python PATH_TO_SKILL/scripts/question_bank.py restore --file D:/Backups/math-bank.zip --home D:/MathBank-Restored
+先安装更新后的 skill，再查看迁移计划，确认后执行。迁移保持题目 ID、修订号、完整解答和
+绘图代码，移除当前记录及审计历史中的图片依赖，验证文本备份后清理题库原图。
+如果解答还依赖图片，迁移会报错，需要先补齐文本/代码；不会自行猜补答案。
+
+```bash
+python SKILL_DIR/scripts/question_bank.py migrate
+python SKILL_DIR/scripts/question_bank.py migrate --apply --backup-keep 1
+python SKILL_DIR/scripts/question_bank.py doctor
+python SKILL_DIR/scripts/question_bank.py stats
+python SKILL_DIR/scripts/question_bank.py config --init
+python SKILL_DIR/scripts/question_bank.py guide-status --stage 初中 --subject 数学
+python SKILL_DIR/scripts/question_bank.py show QUESTION_ID
+python SKILL_DIR/scripts/question_bank.py backup --out /chosen/path/bank.zip
 ```
 
-| 操作 | 实现与范围 |
-|---|---|
-| `stats` | 显示实际目录、题目/文档数、各类前 5 个常见标签、不同标签总数，以及数据库、原件、文档、备份各自占用。 |
-| `doctor` | 检查 SQLite 完整性、外键、题目指纹、标签索引、原件缺失/损坏及文档缺失/超长/用户修改情况。 |
-| `export` | 导出题目及当前命题文档的 JSONL 文本，不含原件字节；导入题目仍须逐项预览与批准。 |
-| `backup` | 用 SQLite 备份 API 生成数据库快照，将命题文档、原件、配置和 SHA-256 校验清单一并写入 ZIP。 |
-| `restore` | 在临时目录验证清单、文件哈希和恢复后的数据，只写入不存在或空的目标目录，保留已有题库。 |
+`SKILL_DIR` 请替换为实际安装路径；Windows PowerShell 对含空格路径加引号。
+完整命令、题目 JSON、逐题审核和恢复方式见[题库说明](references/question-bank.md)。
+旧版 ZIP 先用兼容旧版的 skill 恢复到独立目录，再迁移到 schema 2。
 
-已有内容的题库在新一天首次适用写入前生成自动快照，默认保留 7 份工具生成的
-`auto-*.zip`；手动备份不受该清理策略影响。可另外保留异盘备份应对磁盘故障。
-工具会检查数据库版本，不兼容时拒绝打开，不会覆盖初始化已有数据。
+### PDF 模板
 
-详细操作及 JSON 格式见[题库流程说明](references/question-bank.md)，实现入口为
-[question_bank.py](scripts/question_bank.py)。[行为测试](tests/test_question_bank.py)使用
-合成题与隔离数据目录，覆盖默认不入库、批准绑定、去重、上限、直接编辑、重装路径和
-备份恢复，不会自动收录用户测试时上传的真题。
-
-<p align="right"><a href="#readme-top">返回顶部</a></p>
+默认采用紧凑排版与 12 mm 页边距。模板只输出传入的标题、内容与可选页码，
+不会自动追加英文姓名日期、续页提示、学习口号、课程标准或验证总结页。
+正文语言由任务决定。需要姓名栏、额外标签或速查表时再明确启用。
+历史展示图保留用于说明功能，不代表当前默认样式。
 
 
 ---
 
 ## 版本与构建
 
-当前版本只在 [`SKILL.md`](SKILL.md) 的 `metadata.version` 中维护。
-[`tools/version.py`](tools/version.py) 为打包和发布共用的读取入口，自动派生 ZIP 名称、
-Git 标签校验及发布说明标题。README 徽章直接读取 GitHub Releases，无需手动改版本。
-历史更新记录和 Python/SymPy 依赖版本不属于当前版本配置。
+skill 版本号只保存在根目录 [`VERSION`](VERSION)。
+[`tools/version.py`](tools/version.py) 读取它并校验发布标签。
+源文件、文档与固定名称的 `math-worksheets.zip` 不重复保存 skill 版本号，
+GitHub 发布标签与标题在发布时自动派生。
 
 | 产物 | 获取方式 |
 |---|---|
-| 安装包与校验文件 | [最新 Release](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest) 提供 `math-worksheets-v*.zip` 和 `.zip.sha256`。 |
+| 安装包与校验文件 | [最新 Release](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest) 提供 `math-worksheets.zip` 和 `.zip.sha256`。 |
 | 源码与更新记录 | [源码](https://github.com/Tommie-P-xl/math-worksheets-skill) · [发布说明](RELEASE_NOTES.md) · [维护工具](tools/README.md) |
 
 <details>

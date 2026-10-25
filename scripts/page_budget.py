@@ -494,7 +494,7 @@ def main():
         print(f"page_budget: no such file: {path}", file=sys.stderr)
         return 2
     try:
-        spec = json.load(open(path))
+        spec = json.load(open(path, encoding="utf-8"))
     except Exception as e:                                  # noqa: BLE001
         print(f"page_budget: cannot parse {path}: {e}", file=sys.stderr)
         return 2

@@ -40,8 +40,8 @@ def main():
         print("Usage: check_answer_line.py <ws.tex> <verify.json>",
               file=sys.stderr)
         return 2
-    tex = blank_comments(open(sys.argv[1]).read())
-    data = json.load(open(sys.argv[2]))
+    tex = blank_comments(open(sys.argv[1], encoding="utf-8").read())
+    data = json.load(open(sys.argv[2], encoding="utf-8"))
     spans = segment_spans(tex)
     if spans is None:
         print("\n  ⚠ PARSED ZERO PROBLEMS from this file.")

@@ -127,7 +127,7 @@ def main(argv):
         os.path.join(os.path.dirname(os.path.abspath(json_path)),
                      f"meta_{stem}.tex")
     try:
-        data = json.load(open(json_path))
+        data = json.load(open(json_path, encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as e:
         print(f"Error reading {json_path}: {e}", file=sys.stderr)
         return 1
@@ -136,7 +136,7 @@ def main(argv):
     except ValueError as e:
         print(f"render_meta.py: {e}", file=sys.stderr)
         return 1
-    with open(out_path, "w") as f:
+    with open(out_path, "w", encoding="utf-8") as f:
         f.write(text)
     print(f"Wrote {out_path}")
     return 0

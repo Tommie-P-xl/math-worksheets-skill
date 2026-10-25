@@ -13,9 +13,9 @@ uploaded example, and it does not replace the existing math/PDF verification gat
    measured outcomes for a specified student group. Do not equate a Bloom/DOK label
    or many computations with measured difficulty.
 3. Run ONE `context` query with stage/subject and relevant tags/text. Default 5,
-   maximum 10 references TOTAL, including the single stage-subject guide. Across
+   maximum `reference_limit` references TOTAL (default 10; read `config` first), including the single stage-subject guide. Across
    follow-up queries/show calls, track distinct IDs and guide keys; never exceed
-   10 in one authoring request. A longer solution/figure read for an already chosen
+   the configured limit in one authoring request. A longer solution/figure read for an already chosen
    ID does not count twice. Read only needed fields; do not dump the database.
 4. Use relevant local examples and guide sections directly. If inadequate, make
    a short lookup with the agent's available web tools: prefer the education
@@ -91,6 +91,11 @@ python SKILL_DIR/scripts/question_bank.py guide-preview --stage 初中 --subject
 python SKILL_DIR/scripts/question_bank.py guide-commit --stage 初中 --subject 数学 --file WORK/proposed.md --sources WORK/research.json --approved PREVIEW_SHA256 --approval-note "user's explicit reply or message reference"
 python SKILL_DIR/scripts/question_bank.py guide-show --stage 初中 --subject 数学
 python SKILL_DIR/scripts/question_bank.py show QUESTION_ID --fields stem,answer,solution,diagram,verification
+python SKILL_DIR/scripts/question_bank.py config
+python SKILL_DIR/scripts/question_bank.py guide-status --stage 初中 --subject 数学
+python SKILL_DIR/scripts/question_bank.py guide-review --stage 初中 --subject 数学 --id QUESTION_ID --note "Reviewed this solution; existing topic section already covers its method."
+python SKILL_DIR/scripts/question_bank.py migrate
+python SKILL_DIR/scripts/question_bank.py migrate --apply --backup-keep 1
 python SKILL_DIR/scripts/question_bank.py stats
 python SKILL_DIR/scripts/question_bank.py doctor
 python SKILL_DIR/scripts/question_bank.py backup --out USER_SELECTED_BACKUP.zip
@@ -99,7 +104,7 @@ python SKILL_DIR/scripts/question_bank.py export --out WORK/bank.jsonl
 ```
 
 `preview` never writes personal storage. The approval digest binds the whole
-proposal, uploaded file bytes and current target revision; edits/concurrent
+proposal, source hash metadata, policy settings and current target revision; edits/concurrent
 changes require a fresh preview. `--approval-note` is an audit record, not proof
 of human consent: the agent MUST obtain an actual reply and must never fabricate
 it. There is no blanket `--yes`/auto-save switch or persistent pending inbox.
@@ -111,7 +116,7 @@ Merged tag sets over five are rejected: propose broader accurate labels and ask
 the user to approve the replacement. The tool never drops tags silently.
 
 `context` returns snippets with explicit truncation flags, a character budget
-(default 10000, not a tokenizer-exact token count) and the number of references.
+(configured default 10000, not a tokenizer-exact token count) and the number of references.
 Read full fields only for selected IDs if needed. Empty/inadequate matches do not
 block authoring. Prefer relevant quality to filling the reference limit.
 
@@ -139,9 +144,8 @@ Run `schema` for a compact example. Required fields:
   givens; answer-only constructions stay out of the question figure. Retrieval
   loads semantic givens first, code only on demand. Stored code is never executed
   by this bank tool.
-- Optional `sources`: list of `{file, locator, label}` for uploaded originals or
-  `{url, title, checked_at}` for web references. Files are hashed at preview and
-  copied only after approval. File sources require a nonempty page/question
+- Optional `sources`: list of `{file, locator, label}` at intake (hash only, no copy), or `{name, locator, label, sha256, size}` for portable provenance, or
+  `{url, title, checked_at}` for web references. Files are hashed at preview for provenance and never copied into the bank. File sources require a nonempty page/question
   `locator` so different questions on one scanned page are not merged as one.
   Keep personal handwriting out of the typed stem.
 - Optional `family` to link structural variants (not a claim of duplication),
@@ -163,18 +167,56 @@ error. Sources JSON is a list of `{url,title,checked_at,scope}`. Official facts 
 retain scope/date/source; unverified teaching heuristics must be labeled as such.
 
 `stats` reports actual paths, counts, tag inventories, and separate bytes for
-database/originals/guides/backups/config. `doctor` checks SQL integrity, payloads,
-tag indexes, missing/corrupt originals and overlength/externally edited guides.
-`export` writes portable text question/guide records (original bytes require a
-backup). To import a text question, extract its `item` object, attach accessible
-source files if needed, then preview and approve it individually; never bulk-save
-an unreviewed export. Backups contain a consistent SQLite snapshot, guide text,
-originals, config and a SHA-256 manifest. Restore validates in an isolated staging
+database/guides/backups/config (sources must be zero after migration). `doctor` checks SQL integrity, payloads,
+tag indexes, invalid source metadata or remaining legacy attachments and overlength/externally edited guides.
+`export` writes portable text question/guide records (including complete text/code solutions, without original bytes). To import a text question, extract its `item` object, retain filename/locator/hash provenance, then preview and approve it individually; never bulk-save
+an unreviewed export. Backups contain a consistent SQLite snapshot, guide text, config and a SHA-256 manifest; no original attachments. Restore validates in an isolated staging
 directory and only targets an absent/empty directory, leaving the old bank intact.
-The first successful write on a new day snapshots an existing bank; retention is
-`backup_keep` in config (default 7). Retention only removes tool-owned `auto-*.zip`.
+Each write snapshots the previously committed state of an existing bank; retention is
+`backup_keep` in config (default 1). Retention only removes tool-owned `auto-*.zip`.
 For disk-loss protection choose another disk for a backup copy. Reinstallation
 does not initialize over existing data. A newer incompatible schema is refused.
 No background process, extra API subscription, vector service or model training
 is required. Agents with shell/file access share this home; cloud/other-device
 agents need an explicit transfer or a separate synchronization design.
+
+
+## Schema 2 migration and text/code completeness
+
+The bank stores no attachment bytes. Every question must contain its full stem,
+answer and complete worked solution (all parts/cases). Inline drawing code and
+semantic diagram givens must let an agent understand it without loading a picture.
+Use `diagram.code` for the student figure, `diagram.answer_overlay` or inline
+solution code for auxiliary constructions, and `layout_coordinates` only for
+layout. Coordinates are not mathematical givens. No `includegraphics`, embedded
+raster SVG images, data-image URLs or Markdown image dependencies are allowed.
+A nonempty solution field is structurally checked; the agent must still review
+mathematical completeness rather than calling storage validation a proof.
+
+`migrate` is a read-only legacy-to-current-schema plan. `migrate --apply` preserves question IDs,
+revisions, stem/answer/solution/drawing code/tags and provenance names/hashes;
+it removes source blob references from current records and audit history,
+creates a text-only recoverable snapshot, then removes managed source files.
+Unresolved visual-only solutions block migration. Automatic backups are pruned
+using `backup_keep`; manual backups remain user-owned. Migration does not invent
+missing solutions or erase the user's external source files. Legacy-schema backup ZIPs
+must be restored with a schema-compatible earlier skill into an isolated home and then
+migrated; never mix schemas or overwrite an existing bank.
+
+## Guide coverage after every question change
+
+After each approved insert/revision, read the returned `guide_reviews` or run
+`guide-status`. Pending records are keyed by question ID and revision, so a
+changed solution is reviewed again. Inspect each pending solution, then either:
+
+- Propose a concise topic update with evidence IDs. Obtain the user's actual
+  approval unless the current request already authorizes this exact maintenance;
+  run guide-preview/guide-commit. The digest binds the guide, its prior version
+  and all pending question revisions covered by the review.
+- If existing guidance suffices, use guide-review with the inspected IDs and a
+  concrete assessment note. This records a review without changing guide text.
+
+Do not mechanically append one section per question or mark unseen records
+reviewed. A stored draft heading is not evidence of approval; retain audit
+provenance and remove stale draft wording only during an authorized update.
+Numeric limits and switches are documented in [configuration.md](configuration.md).

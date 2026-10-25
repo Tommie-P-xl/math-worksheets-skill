@@ -88,7 +88,8 @@ class BankTests(unittest.TestCase):
         saved = self.bank.get(first["id"])["item"]
         self.assertEqual(saved["tags"]["grades"], ["七年级", "八年级", "九年级"])
         self.assertEqual(len(saved["sources"]), 1)
-        self.assertEqual(len(list((self.bank.home / "sources").iterdir())), 1)
+        self.assertFalse((self.bank.home / "sources").exists())
+        self.assertNotIn("blob", saved["sources"][0])
         self.assertTrue(self.bank.doctor()["ok"])
 
     def test_each_tag_category_has_five_label_cap_including_merged_tags(self):
@@ -216,7 +217,8 @@ class BankTests(unittest.TestCase):
         self.assertEqual(recovered.get(saved["id"]), self.bank.get(saved["id"]))
         self.assertEqual(recovered.read_guide("初中", "数学")["text"], self.bank.read_guide("初中", "数学")["text"])
         self.assertTrue(recovered.doctor()["ok"])
-        self.assertEqual(recovered.stats()["bytes"]["sources"], len(original.read_bytes()))
+        self.assertEqual(recovered.stats()["bytes"]["sources"], 0)
+        self.assertEqual(recovered.get(saved["id"])["item"]["sources"][0]["sha256"], qb.digest(original.read_bytes()))
         with recovered.connection() as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM events").fetchone()[0], 2)
         with self.assertRaisesRegex(qb.BankError, "existing bank left intact"):
@@ -238,13 +240,13 @@ class BankTests(unittest.TestCase):
             self.assertFalse((self.work / "target").exists())
         self.assertFalse((self.work / "escape").exists())
 
-    def test_corrupt_original_and_incompatible_schema_are_reported(self):
+    def test_no_attachment_dependency_and_incompatible_schema_are_reported(self):
         source = self.work / "source.txt"
         source.write_text("raw", encoding="utf-8")
         saved = self.save(sources=[{"file": str(source), "locator": "1"}])
-        blob = self.bank.get(saved["id"])["item"]["sources"][0]["blob"]
-        qb.safe_child(self.bank.home, blob).write_text("bad", encoding="utf-8")
-        self.assertFalse(self.bank.doctor()["ok"])
+        source.unlink()
+        self.assertTrue(self.bank.doctor()["ok"])
+        self.assertIn("sha256", self.bank.get(saved["id"])["item"]["sources"][0])
         con = sqlite3.connect(self.bank.db)
         try:
             con.execute("PRAGMA user_version=99")
@@ -283,9 +285,13 @@ class BankTests(unittest.TestCase):
         older = automatic[0].with_name("auto-2000-01-01-abcdef12.zip")
         older.write_bytes(automatic[0].read_bytes())
         os.utime(older, (1, 1))
-        self.guide("# 初中数学\n小幅修改，不应创建当天第二份自动备份。")
+        self.guide("# 初中数学\n每次写入均保存上一代，默认只留一份。")
         self.assertEqual(len(list((self.bank.home / "backups").glob("auto-*.zip"))), 1)
         self.assertTrue(manual.exists())
+        newest = list((self.bank.home / "backups").glob("auto-*.zip"))[0]
+        restored_latest = qb.Bank(self.work / "latest")
+        restored_latest.restore(newest)
+        self.assertIsNotNone(restored_latest.read_guide("初中", "数学"))
 
     def test_global_path_independent_of_workdir_and_skill_reinstallation(self):
         env = dict(os.environ, MWS_DATA_HOME=str(self.bank.home), PYTHONUTF8="1")

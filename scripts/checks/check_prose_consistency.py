@@ -451,14 +451,14 @@ def main():
         except (ValueError, TypeError, KeyError, OSError) as exc:
             print(f"Source review failed: {exc}", file=sys.stderr)
             sys.exit(2)
-    tex = open(tex_path).read()
-    data = json.load(open(json_path))
+    tex = open(tex_path, encoding="utf-8").read()
+    data = json.load(open(json_path, encoding="utf-8"))
     # Expand \probfig{N} into the rendered figure bodies BEFORE parsing, so
     # the figure-label check (CASE-21) sees the labels the student sees. An
     # unresolved call means an UNCHECKED figure — like the zero-parse guard
     # below, that must never read as a pass.
     if figs_path:
-        tex, unresolved = expand_probfigs(tex, probfig_bodies(open(figs_path).read()))
+        tex, unresolved = expand_probfigs(tex, probfig_bodies(open(figs_path, encoding="utf-8").read()))
     else:
         unresolved = sorted({int(n) for n in CALL_RE.findall(tex)})
     if unresolved:
@@ -507,7 +507,7 @@ def main():
     meta_flat = [n for c in block_meta for n in c]
     pts_flat = [n for c in block_pts for n in c]
     if meta_flat or pts_flat:
-        have = probmeta_ids(open(meta_path).read()) if meta_path else set()
+        have = probmeta_ids(open(meta_path, encoding="utf-8").read()) if meta_path else set()
         unresolved_meta = sorted(set(meta_flat + pts_flat) - have)
         if unresolved_meta:
             # an unresolved marker is an UNCHECKED marker — same rule as

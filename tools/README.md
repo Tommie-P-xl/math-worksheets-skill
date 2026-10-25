@@ -6,16 +6,14 @@ source/asset failures and build/run an extracted runtime-only ZIP.
 
 Run `python tools/package_skill.py` to create a deterministic ZIP and SHA256 file
 in `dist/`. The single top-level `math-worksheets/` directory is compatible with
-CC Switch's recursive SKILL.md discovery. Packaging uses an allowlist of runtime
-folders; README, tests, Git metadata and maintainer files do not enter the skill.
+CC Switch's recursive SKILL.md discovery. Packaging uses an explicit allowlist of runtime
+files; README, tests, Git metadata and maintainer files do not enter the skill.
 
-For a release, edit **only `metadata.version` in SKILL.md** for the version number.
-Update the prose under `# Current release` in RELEASE_NOTES.md without inserting a
-second current version literal. `tools/version.py` is the shared reader for the
-packager and release workflow; it derives the tag, Actions outputs and current
-release-note heading. Historical changelog versions are immutable records, not
-additional configuration. Python/SymPy dependency versions and the bank schema
-version are independent of the skill release version.
+For a release, edit only root `VERSION` for release identity. Do not repeat
+skill release numbers in source filenames, documentation or package names.
+`tools/version.py` reads that file for tag validation and Actions outputs;
+release notes use an unnumbered heading. Dependency constraints and database
+schema identifiers remain independent runtime compatibility data.
 
 ```bash
 python tools/version.py

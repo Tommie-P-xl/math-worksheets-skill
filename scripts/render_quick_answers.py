@@ -638,14 +638,7 @@ def render(data, level="", ws_tex=""):
     summary = [ln if ln.strip() else r"\par" for ln in summary]
     while summary and summary[-1] == r"\par":
         summary.pop()
-    if summary:
-        lines += [
-            r"\AtEndDocument{\clearpage",
-            r"\noindent{\large\textbf{Verification \& Curriculum "
-            r"Summary}}\par\nopagebreak",
-            r"\vspace{2pt}\noindent\rule{\linewidth}{1pt}\par\nopagebreak",
-            r"\vspace{4pt plus 2pt}",
-        ] + summary + ["}"]
+    # Validation/curriculum reports are not part of a printable answer table.
     return "\n".join(lines)
 
 
@@ -732,6 +725,7 @@ def preflight(ak_tex, out_base):
 
 
 def main(argv):
+    from question_bank import Bank
     args = [a for a in argv[1:] if not a.startswith("--ws=")]
     ws_path = next((a[len("--ws="):] for a in argv[1:]
                     if a.startswith("--ws=")), None)
@@ -750,27 +744,28 @@ def main(argv):
     try:
         # Decimal float parsing keeps the JSON's written precision: a verified
         # 6.30 must print 6.30 in the bank, not 6.3
-        data = json.load(open(json_path), parse_float=Decimal)
-        ak_tex = open(ak_path).read()
+        data = json.load(open(json_path, encoding="utf-8"), parse_float=Decimal)
+        ak_tex = open(ak_path, encoding="utf-8").read()
         # Optional: without it the bank still renders, it just cannot report
         # which printed responses nothing covers.
-        ws_tex = open(ws_path).read() if ws_path else ""
+        ws_tex = open(ws_path, encoding="utf-8").read() if ws_path else ""
     except (OSError, json.JSONDecodeError) as e:
         print(f"Error reading input: {e}", file=sys.stderr)
         return 1
     m = AKTITLE_RE.search(ak_tex)
     level = m.group(1).strip() if m else ""
-    faults = preflight(ak_tex, os.path.basename(out_path))
+    enabled = Bank().config()["quick_answers"]
+    faults = preflight(ak_tex, os.path.basename(out_path)) if enabled else []
     if faults:
         for f in faults:
             print(f"render_quick_answers.py: {f}", file=sys.stderr)
         return 1
     try:
-        text = render(data, level, ws_tex)
+        text = render(data, level, ws_tex) if enabled else "% Quick answers disabled by config.json; no printed metadata.\n"
     except ValueError as e:
         print(f"render_quick_answers.py: {e}", file=sys.stderr)
         return 1
-    with open(out_path, "w") as f:
+    with open(out_path, "w", encoding="utf-8") as f:
         f.write(text)
     print(f"Wrote {out_path}")
     return 0

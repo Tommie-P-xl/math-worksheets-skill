@@ -2792,7 +2792,7 @@ def check_problem(p, ptype):
 def run_verification(json_path):
     WIDE_TOLS.clear()   # the test suites call this repeatedly in-process
     try:
-        with open(json_path) as f:
+        with open(json_path, encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError) as e:
         print(f"❌ Could not read verification file: {e}", file=sys.stderr)

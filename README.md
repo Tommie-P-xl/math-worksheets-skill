@@ -54,7 +54,7 @@ review and approval. See [the bank workflow](references/question-bank.md).
 
 | 1 · Install the skill | 2 · Prepare the runtime | 3 · Ask your agent |
 |---|---|---|
-| Download `math-worksheets-v*.zip` from [Releases](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest), then install with CC Switch or manually. | Bank management needs only Python; PDF output additionally needs Bash, SymPy, LaTeX and Poppler. See [full dependencies](#runtime-dependencies). | Specify taught scope, count, language and deliverables, or upload questions for faithful reproduction. |
+| Download `math-worksheets.zip` from [Releases](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest), then install with CC Switch or manually. | Bank management needs only Python; PDF output additionally needs Bash, SymPy, LaTeX and Poppler. See [full dependencies](#runtime-dependencies). | Specify taught scope, count, language and deliverables, or upload questions for faithful reproduction. |
 
 ```text
 Use math-worksheets to create 4 NEW questions similar to the uploaded example.
@@ -111,7 +111,7 @@ explicitly marked for manual review. See the
 ### CC Switch: install the release ZIP
 
 1. Open [Releases](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest)
-   and download the asset named **`math-worksheets-v*.zip`**.
+   and download the asset named **`math-worksheets.zip`**.
 2. In **CC Switch → Skills → Install from ZIP**, select the downloaded ZIP.
 3. Enable/sync the skill for Claude Code, Codex or your chosen agent.
 4. Install the runtime dependencies below. If the skill does not appear, restart
@@ -148,7 +148,7 @@ Then ask: `Follow /absolute/path/math-worksheets-skill/SKILL.md to make my works
 | Tool | Purpose |
 |---|---|
 | Bash | Run the build chain; on Windows, Git Bash or MSYS2 |
-| Python + SymPy ≥1.12 | Answer checking; recommend the measured upstream version 1.14.0 |
+| Python ≥3.10 + SymPy ≥1.12 | Answer checking; recommend the measured upstream version 1.14.0 |
 | Tectonic or pdflatex | Compile ordinary LaTeX documents; pgfplots ≥1.18 required |
 | XeLaTeX + CJK fonts | Chinese/Unicode examples; ctex and Fandol fonts are used here |
 | Poppler `pdftotext` | Check text positions in the compiled PDFs |
@@ -317,230 +317,120 @@ every pixel of a figure. A clear review record is not a machine proof.
 
 ## Global question bank
 
-The bank helps an agent decide what kinds of similar questions to write and how
-to control their demand. It stores reusable material outside the project and
-skill directories. It uses Python's standard library and SQLite; it needs no
-database server, extra model subscription, embedding service or background process.
-The existing PDF and mathematical verification dependencies still apply when
-producing worksheets.
+The bank stores **text and code only**: complete stems, answers, worked solutions,
+tags, demand analysis, semantic diagram givens, and inline TikZ/pgfplots/SVG.
+Plots and auxiliary constructions are code, so an agent can understand a saved
+reference entirely from text. Photos can still be current-task inputs; the bank
+keeps filename/locator/hash or URL provenance and never copies their bytes.
+Personal bank data is excluded from installable packages.
 
-### Architecture and responsibilities
+Questions still require individual user approval. After an insert/revision,
+inspect the stage/subject guide: propose an approved concise update when the
+solution contributes reusable guidance, or record an assessment that existing
+guidance suffices. `guide-status` tracks pending IDs and revisions. Each
+stage/subject has one directly editable Markdown guide.
 
-```mermaid
-flowchart LR
-    A["Agent workflow"] --> B["SKILL.md and references"]
-    B --> C["question_bank.py"]
-    C --> D[("SQLite questions and history")]
-    C --> E["Editable authoring guide"]
-    C --> F["Originals, config and backups"]
-    D --> G["Compact reference packet"]
-    E --> G
-    G --> H["Design, solve and verify"]
-```
+### Data home and live configuration
 
-<details>
-<summary>Expand: directory layout and detailed data flow</summary>
-
-```text
-Installed skill                         Global user data home
-SKILL.md + references                   bank.sqlite
-    │ workflow and consent rules           ├─ problems: text/JSON content and revision
-    ▼                                      ├─ tags: indexed many-to-one labels
-scripts/question_bank.py ────────────────►  ├─ guides: identity, hash and provenance
-    │ validation, retrieval, storage       └─ events: approved before/after history
-    │                                   guides/STAGE/SUBJECT.md
-    │                                      └─ current, directly editable authoring guide
-    │                                   sources/<content-hash>.<extension>
-    │                                      └─ approved originals, deduplicated by content
-    │                                   config.json + backups/
-    ▼
-Compact reference packet → question design → independent solution → existing checks/PDF build
-```
-
-</details>
-
-
-| Component | What it stores or enforces |
-|---|---|
-| `problems` | One stable ID and unique content fingerprint per question; stem, answer, solution, demand profile, diagram description, sources and revision are text/JSON. Grades and answers do not create a second question identity. |
-| `tags` | Searchable labels linked to the question ID. Each category has at most **5 labels per question**; an item can carry both grade and exam labels without being copied. This is not a five-label limit on the entire bank. |
-| `guides` | A unique `(stage, subject)` key, deterministic file path, content hash, revision and research provenance. Stages are **小学 / 初中 / 高中** (primary / lower secondary / upper secondary). |
-| `guides/STAGE/SUBJECT.md` | The authoritative current guide text, e.g. `guides/初中/数学.md`. Topic sections live inside that one file. Direct user edits are read immediately; SQL metadata/history does not replace the file. |
-| `events` | Approval note/digest and before/after records for approved writes. This is revision history, not an inbox for unapproved uploads. |
-| `sources/` | Original files copied only after approval. A page/question locator distinguishes separate questions on the same scan. Source hashes detect changed or corrupt originals. |
-
-Text storage keeps mathematics inspectable: formulas use LaTeX, and diagrams may
-store semantic givens plus TikZ/pgfplots/SVG code. Layout coordinates and
-answer-only overlays remain distinct from question givens. The bank never executes
-stored drawing code. SQLite itself is a binary file; the CLI returns compact JSON
-instead of asking the agent to read the database file.
-
-### Question intake and approval
-
-```mermaid
-flowchart TD
-    A[Uploaded question or new draft] --> B[Transcribe, solve and propose tags/demand]
-    B --> C[preview: validate, hash sources and review duplicate candidates]
-    C --> D{User approves this question and its metadata?}
-    D -->|No or no reply| E[Keep in current work only; do not archive]
-    D -->|Yes| F[commit: check approved digest and current revision]
-    F --> G[Apply automatic backup policy before writing]
-    G --> H[Insert, merge or revise one record and log approval history]
-```
-
-The agent asks about **each uploaded question**, showing proposed stage, grade or
-exam, knowledge and type labels. Users can correct those details or decline.
-Generated questions and guide changes need their own approval; approval of one
-does not approve the others. A pending archival decision does not block otherwise
-authorized question generation.
-
-`preview` creates no persistent pending record and copies no source files. Its
-SHA-256 receipt binds the proposal, source bytes and current target revision.
-`commit` requires that receipt and an approval note. A changed proposal or stale
-revision is rejected. The receipt prevents accidental stale writes; **the agent
-must still obtain a real user reply** rather than fabricate the note.
-
-Exact content matches, or the same source occurrence, target one existing record;
-approved grade/exam tags and source references merge into it. Conflicting answers
-require an explicit revision. Text-similar candidates require review; this is a
-heuristic, not a proof of mathematical equivalence. Label unions over five are
-rejected so the user can approve a concise replacement. Nothing is silently cut.
-
-### Retrieval and authoring flow
-
-1. Confirm the taught scope. Extract **knowledge span, estimated key reasoning
-   steps, method visibility, calculation load, case-analysis burden, scaffolding,
-   and difficulty with its basis**. Estimates stay separate from observed student
-   outcomes; a cognitive-demand label is not a calibrated success rate.
-2. Run `context` with stage/subject and relevant grade/topic filters. SQLite's tag
-   index applies the metadata filters; text matching ranks the resulting examples.
-   Guide sections are selected by relevance. The packet defaults to **5 references**,
-   with a hard maximum of **10 questions and documents combined** and a default
-   **10000-character output budget**. This is a character budget, not an exact token
-   count. Truncated fields are marked; full solutions/code are fetched only when needed.
-3. Reuse suitable local material. If the references are missing or inadequate, use
-   the agent's available web tools for a short official curriculum/assessment lookup.
-   An unrelated general guide does not suppress the need for research. Without web
-   access, state the unverified scope assumption. The CLI does not browse by itself.
-4. Plan the target skill, question family, decisive inference, subpart progression,
-   scoring points and difficulty levers. Solve before finalizing the wording; check
-   admissible cases, taught methods and whether the intended optimum is attainable.
-   Use the existing `verify.py` and build gates for supported calculations and PDFs.
-5. Offer any new example or research summary for optional saving. A guide proposal
-   records source URLs, checked dates and applicable scope. Reuse an applicable local
-   summary next time; recheck time-sensitive requirements when the requested year or
-   scope changes. User approval is required before retaining or replacing it.
-
-The agent tracks the ten-reference limit across the whole authoring request,
-including follow-up reads, not just each CLI invocation. Examples and guidance
-improve the available context; this is not automatic model training or a guarantee
-of educational quality. Supported calculations, geometric proofs, source fidelity
-and classroom suitability still require their respective checks.
-
-### Location, configuration and reinstallation
-
-Home resolution is identical in every project: **`--home` → `MWS_DATA_HOME` → OS
-default**. Read-only use of a missing bank returns empty without creating a folder.
-
-| OS | Default data home |
-|---|---|
-| Windows | `%LOCALAPPDATA%\MathWorksheets` (usually `C:\Users\<user>\AppData\Local\MathWorksheets`) |
+| Platform | Default home |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%/MathWorksheets` |
 | macOS | `~/Library/Application Support/MathWorksheets` |
 | Linux | `${XDG_DATA_HOME:-~/.local/share}/math-worksheets` |
 
-The database is `bank.sqlite` inside that home. Run `stats` to see the **actual
-resolved path**: packaged or redirected Windows environments may map AppData to
-another physical location. No machine-specific path or personal database is
-distributed in this repository or the installable ZIP.
+Override with `MWS_DATA_HOME` or `--home`. Reinstalling the skill preserves data.
+`config --init` materializes a complete `config.json`; edits apply on the next
+command/build. See [all settings](references/configuration.md).
 
-**Deleting and reinstalling only the skill does not delete its database, originals,
-guides or backups.** Reinstallation reconnects to the same data home. If the account,
-environment or configured home changes, point `MWS_DATA_HOME` to the existing home
-or restore a backup; a newly empty path does not mean the old data was deleted.
-Removing the data directory or clearing the host application's data is a separate
-operation and is not covered by the skill-only reinstallation guarantee.
+The file remains standard JSON. `_comments` supplies a short Chinese description
+and default for every parameter; it does not affect runtime values. `config --init`
+refreshes those notes and fills missing defaults while preserving valid settings.
+Existing configurations without `_comments` remain supported.
 
 <details>
-<summary>Expand: fixed locations, migration and length configuration</summary>
+<summary>All configuration parameters, defaults and meanings</summary>
 
-For a fixed cross-project location, set the same `MWS_DATA_HOME` in the environments
-that run the agent. The following PowerShell example assumes `D:\MathWorksheetsData`
-is already your data home (or you intend to start a new bank there):
-
-```powershell
-$env:MWS_DATA_HOME = 'D:\MathWorksheetsData'
-```
-
-Setting the variable changes path selection; it **does not move existing data**.
-To migrate, back up the old home, restore to an absent/empty destination, verify it,
-then update the variable in each relevant environment. A session variable is not a
-permanent system setting. Other devices/cloud agents need an explicit transfer or
-a separate synchronization design.
-
-`config.json` defaults to:
-
-```json
-{"guide_max_chars":6000,"backup_keep":7}
-```
-
-Each stage-subject guide is capped at **6000 Unicode characters**, including headings
-and links; the configurable range is 500–12000. Both proposed writes and direct-edit
-reads enforce the cap. Overlength content produces an error with its path, rather
-than truncation or an extra topic-specific guide. Edit the guide or adjust the cap.
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `guide_max_chars` | `6000` | Maximum characters per stage/subject guide, including headings and links (500–12000). |
+| `backup_keep` | `1` | Automatic backup generations to retain (1–100); manual backups are untouched. |
+| `auto_backup_enabled` | `true` | Back up the committed previous state before writes. |
+| `reference_limit` | `10` | Distinct question + guide references allowed per authoring request (1–100). |
+| `reference_default` | `5` | Default retrieval count, including the guide; no greater than reference_limit. |
+| `context_max_chars` | `10000` | Default retrieval character budget, at least 1200 and no greater than context_max_chars_limit. |
+| `context_max_chars_limit` | `50000` | Largest allowed retrieval character budget, at most 1000000. |
+| `guide_excerpt_chars` | `2400` | Maximum characters in a retrieved guide excerpt. |
+| `stem_excerpt_chars` | `1600` | Maximum characters in each retrieved question stem excerpt. |
+| `answer_excerpt_chars` | `500` | Maximum characters in each retrieved answer excerpt. |
+| `solution_excerpt_chars` | `900` | Maximum characters in each solution excerpt; use show for complete text/code. |
+| `givens_excerpt_chars` | `1200` | Maximum characters in each semantic diagram-givens excerpt. |
+| `duplicate_threshold` | `0.82` | Text similarity threshold for duplicate review, greater than 0 and at most 1. |
+| `duplicate_scan_limit` | `300` | Recent questions compared for possible duplicates. |
+| `duplicate_candidate_limit` | `5` | Maximum possible duplicate candidates shown in a preview. |
+| `guide_review_on_commit` | `true` | Require the agent to check guide coverage after question inserts or revisions. |
+| `default_question_count` | `10` | Practice quantity when the user does not specify one. |
+| `page_margin_left_mm` | `12` | PDF left text margin in millimeters (5–50). |
+| `page_margin_right_mm` | `12` | PDF right text margin in millimeters (5–50). |
+| `page_margin_top_mm` | `12` | PDF top text margin in millimeters (5–50); leave space for optional headers. |
+| `page_margin_bottom_mm` | `12` | PDF bottom text margin in millimeters (5–50). |
+| `page_numbers` | `true` | Display template page numbers. |
+| `name_date_fields` | `false` | Display first-page name/date blanks; documents supply localized labels. |
+| `header_rule` | `false` | Display a separator rule beneath the running header. |
+| `quick_answers` | `false` | Generate a quick-answer table without a verification/curriculum appendix. |
+| `problem_gap_mm` | `1.5` | Compact question spacing in millimeters; decimals are allowed. |
+| `answer_problem_gap_mm` | `2` | Answer-key question spacing in millimeters; use a positive integer. |
 
 </details>
 
-### Maintenance and backup
+Each write snapshots the committed previous state. Retention applies only to
+tool-owned automatic backups; manual backups remain untouched. Snapshots contain
+the database, guides, config and checksum manifest, with no images.
 
-You can ask the agent to inspect storage, open the authoring guide, export text or
-create a backup. For direct use, replace `PATH_TO_SKILL` with the installed path:
+### Upgrade an existing bank
 
-```powershell
-python PATH_TO_SKILL/scripts/question_bank.py stats
-python PATH_TO_SKILL/scripts/question_bank.py doctor
-python PATH_TO_SKILL/scripts/question_bank.py context --stage 初中 --subject 数学 --topic 相似三角形 --limit 5
-python PATH_TO_SKILL/scripts/question_bank.py guide-show --stage 初中 --subject 数学
-python PATH_TO_SKILL/scripts/question_bank.py export --out D:/Exports/math-bank.jsonl
-python PATH_TO_SKILL/scripts/question_bank.py backup --out D:/Backups/math-bank.zip
-python PATH_TO_SKILL/scripts/question_bank.py restore --file D:/Backups/math-bank.zip --home D:/MathBank-Restored
+Install the updated skill, inspect the dry run, then explicitly apply it. Migration preserves
+IDs, revisions, math text, complete solutions and drawing code. It removes
+attachment dependencies from current records and audit history, validates a
+text-only snapshot, then cleans managed source files. Visual-only solutions
+block migration until their text/code is complete; missing mathematics is never
+invented.
+
+```bash
+python SKILL_DIR/scripts/question_bank.py migrate
+python SKILL_DIR/scripts/question_bank.py migrate --apply --backup-keep 1
+python SKILL_DIR/scripts/question_bank.py doctor
+python SKILL_DIR/scripts/question_bank.py stats
+python SKILL_DIR/scripts/question_bank.py config --init
+python SKILL_DIR/scripts/question_bank.py guide-status --stage 初中 --subject 数学
+python SKILL_DIR/scripts/question_bank.py show QUESTION_ID
+python SKILL_DIR/scripts/question_bank.py backup --out /chosen/path/bank.zip
 ```
 
-| Operation | Implementation and scope |
-|---|---|
-| `stats` | Resolved home, question/guide counts, top five labels per category, total distinct label counts, and separate database/original/guide/backup sizes. |
-| `doctor` | SQLite integrity and foreign keys, question fingerprints, tag indexes, missing/corrupt originals, and missing/overlength/user-edited guides. |
-| `export` | JSONL text records for questions and current guides; original file bytes are not included. Import questions individually through review/approval. |
-| `backup` | SQLite backup API snapshot plus current guide files, original files, config and a SHA-256 manifest in one ZIP. |
-| `restore` | Verify manifest, file hashes and restored data in a staging directory; install only into an absent/empty destination, preserving an existing bank. |
+Replace `SKILL_DIR` with the installation path; quote paths with spaces in
+PowerShell. See [bank commands/schema](references/question-bank.md) for approvals,
+export and restore. Restore old-schema ZIPs with a compatible older skill into
+an isolated home before migrating them to schema 2.
 
-Before the first applicable write on a new day, an existing populated bank gets an
-automatic snapshot; the default retention is seven tool-owned `auto-*.zip` files.
-Manual backups are not pruned by this policy. Keep an additional backup copy on a
-different disk for disk-loss recovery. Schema versions are checked; incompatible
-versions are refused rather than initialized over existing data.
+### PDF templates
 
-See [the detailed workflow and JSON schema](references/question-bank.md) and the
-entry points in [question_bank.py](scripts/question_bank.py). Behavioral checks in
-[test_question_bank.py](tests/test_question_bank.py) use synthetic questions and
-isolated data homes, covering default refusal, bound approvals, deduplication,
-limits, direct guide edits, reinstallation paths and backup/restore.
-
-<p align="right"><a href="#readme-top">Back to top</a></p>
+Defaults are compact content and 12 mm margins. Templates print supplied titles
+and optional page numbers without fixed name/date text, continuation labels,
+learning slogans, curriculum or verification appendix pages. Content follows the
+requested language. Historical previews illustrate features rather than the current defaults.
 
 
 ---
 
 ## Version and builds
 
-The current version is maintained only in `metadata.version` in
-[`SKILL.md`](SKILL.md). [`tools/version.py`](tools/version.py) is the shared reader
-for packaging and publishing; it derives ZIP names, tag validation and release-note
-headings. The README badge reads GitHub Releases directly. Historical changelog
-entries and Python/SymPy dependency versions are not current-version configuration.
+Release identity is maintained only in root [`VERSION`](VERSION).
+[`tools/version.py`](tools/version.py) reads it for tag validation. Source files,
+documentation and the fixed `math-worksheets.zip` filename contain no duplicated
+skill release numbers. GitHub release titles/tags are derived when publishing.
 
 | Artifact | Where to get it |
 |---|---|
-| Installable package and checksum | The [latest release](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest) contains `math-worksheets-v*.zip` and `.zip.sha256`. |
+| Installable package and checksum | The [latest release](https://github.com/Tommie-P-xl/math-worksheets-skill/releases/latest) contains `math-worksheets.zip` and `.zip.sha256`. |
 | Source and history | [Repository](https://github.com/Tommie-P-xl/math-worksheets-skill) · [Release notes](RELEASE_NOTES.md) · [Maintainer tools](tools/README.md) |
 
 <details>

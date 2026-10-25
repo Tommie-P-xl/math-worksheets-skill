@@ -676,7 +676,7 @@ def build_figures(problems):
                 continue     # opt-in marker on a triangle problem; no-op here
             if kind != "right_triangle":
                 errors.append(
-                    f"problem {pid}: unknown figure kind {kind!r} — v1 renders "
+                    f"problem {pid}: unknown figure kind {kind!r} — this renderer supports "
                     "'triangle' (automatic) and 'right_triangle'. Other shapes "
                     "keep using the hand-built templates in "
                     "references/latex-templates.md.")
@@ -741,7 +741,7 @@ def main(argv):
         return 1
     json_path = argv[0]
     try:
-        with open(json_path) as f:
+        with open(json_path, encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError) as e:
         print(f"❌ Could not read {json_path}: {e}", file=sys.stderr)
@@ -770,7 +770,7 @@ def main(argv):
         "% Worksheet usage: \\input this file after \\begin{document}, then\n"
         "% put \\probfig{N} inside problem N's minipage.\n"
         "\\newcommand{\\probfig}[1]{\\csname probfig#1\\endcsname}\n")
-    with open(out_path, "w") as f:
+    with open(out_path, "w", encoding="utf-8") as f:
         f.write(header)
         for pid, comment, lines in figures:
             f.write(_wrap(pid, comment, lines))

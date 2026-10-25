@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
@@ -12,6 +12,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import sqlite3
+import stat
 import sys
 import tempfile
 import time
@@ -19,11 +20,53 @@ import unicodedata
 import uuid
 import zipfile
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 STAGES = ("小学", "初中", "高中")
 TAG_CATEGORIES = ("stages", "subjects", "grades", "exams", "topics", "types", "methods")
 DEMAND_TEXT = ("knowledge_span", "method_visibility", "calculation_load", "case_burden", "scaffolding")
-DEFAULT_CONFIG = {"guide_max_chars": 6000, "backup_keep": 7}
+DEFAULT_CONFIG = {
+    "guide_max_chars": 6000, "backup_keep": 1, "auto_backup_enabled": True,
+    "reference_limit": 10, "reference_default": 5, "context_max_chars": 10000,
+    "context_max_chars_limit": 50000, "guide_excerpt_chars": 2400,
+    "stem_excerpt_chars": 1600, "answer_excerpt_chars": 500,
+    "solution_excerpt_chars": 900, "givens_excerpt_chars": 1200,
+    "duplicate_threshold": 0.82, "duplicate_scan_limit": 300,
+    "duplicate_candidate_limit": 5, "guide_review_on_commit": True,
+    "default_question_count": 10, "page_margin_left_mm": 12,
+    "page_margin_right_mm": 12, "page_margin_top_mm": 12,
+    "page_margin_bottom_mm": 12, "page_numbers": True,
+    "name_date_fields": False, "header_rule": False, "quick_answers": False,
+    "problem_gap_mm": 1.5, "answer_problem_gap_mm": 2,
+}
+CONFIG_COMMENTS = {
+    "guide_max_chars": "单份学段/学科命题指南的字符上限，含标题和链接；范围500–12000。",
+    "backup_keep": "自动备份保留代数，范围1–100；手动备份不自动删除。",
+    "auto_backup_enabled": "是否在写入前自动备份上一代已提交数据。",
+    "reference_limit": "每次命题可参考的不同题目和指南总上限，范围1–100。",
+    "reference_default": "单次检索默认返回的参考数量，包含指南；不得大于reference_limit。",
+    "context_max_chars": "单次检索结果的默认字符预算，至少1200且不超过context_max_chars_limit。",
+    "context_max_chars_limit": "允许指定的检索字符预算上限，不超过1000000。",
+    "guide_excerpt_chars": "检索结果中命题指南节选的字符上限。",
+    "stem_excerpt_chars": "检索结果中每题题面节选的字符上限。",
+    "answer_excerpt_chars": "检索结果中每题答案节选的字符上限。",
+    "solution_excerpt_chars": "检索结果中每题解答节选的字符上限；完整内容用show读取。",
+    "givens_excerpt_chars": "检索结果中每题图形已知关系节选的字符上限。",
+    "duplicate_threshold": "疑似重复题的文本相似度阈值，大于0且不超过1。",
+    "duplicate_scan_limit": "检查疑似重复题时比较的最近题目数量。",
+    "duplicate_candidate_limit": "预览时最多显示多少个疑似重复题候选。",
+    "guide_review_on_commit": "题目入库或修订后是否要求Agent检查命题指南覆盖情况。",
+    "default_question_count": "用户未指定数量时，Agent默认生成的练习题数。",
+    "page_margin_left_mm": "PDF正文左页边距，单位毫米；范围5–50。",
+    "page_margin_right_mm": "PDF正文右页边距，单位毫米；范围5–50。",
+    "page_margin_top_mm": "PDF正文上页边距，单位毫米；范围5–50，启用页眉时需留足空间。",
+    "page_margin_bottom_mm": "PDF正文下页边距，单位毫米；范围5–50。",
+    "page_numbers": "是否显示模板页码。",
+    "name_date_fields": "是否显示首页姓名/日期填写栏；栏名由文档按所用语言提供。",
+    "header_rule": "是否显示页眉下方的分隔横线。",
+    "quick_answers": "是否生成答案速查表；不自动追加验证或课程总结页。",
+    "problem_gap_mm": "紧凑排版时题目之间的间距，单位毫米，可使用小数。",
+    "answer_problem_gap_mm": "答案册相邻题目之间的间距，单位毫米，使用正整数。",
+}
 ITEM_FIELDS = {"id", "title", "summary", "stem", "answer", "solution", "tags", "demand",
                "origin", "verification", "diagram", "sources", "family", "uncertainties", "duplicate_decision"}
 DDL = """
@@ -41,6 +84,10 @@ CREATE TABLE IF NOT EXISTS guides (
 CREATE TABLE IF NOT EXISTS events (
  id INTEGER PRIMARY KEY, time TEXT NOT NULL, kind TEXT NOT NULL, target TEXT NOT NULL,
  approval TEXT NOT NULL, receipt TEXT NOT NULL, before_json TEXT, after_json TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS guide_reviews (
+ stage TEXT NOT NULL, subject TEXT NOT NULL, question_id TEXT NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
+ question_revision INTEGER NOT NULL, guide_sha256 TEXT NOT NULL, time TEXT NOT NULL, note TEXT NOT NULL,
+ PRIMARY KEY(stage,subject,question_id));
 """
 
 
@@ -84,6 +131,26 @@ def fingerprint(item):
     return digest({"stem": normalize(item["stem"]), "givens": item.get("diagram", {}).get("givens", [])})
 
 
+def text_only(value):
+    """Reject embedded/linked visual assets, while allowing ordinary provenance URLs."""
+    text = encoded(value)
+    if re.search(r"\\\\(?:includegraphics|includepdf|includesvg|pgfimage|pgfdeclareimage|input|include)\b|data:image/|<(?:[\w.-]+:)?(?:image|img|foreignObject)\b|!\[[^\]]*\]\(", text, re.I):
+        raise BankError("bank content must be text/code only; replace image dependencies with semantic givens and drawing code")
+
+
+def source_metadata(source):
+    """Keep provenance, never the uploaded bytes or a dependency on their path."""
+    return {k: v for k, v in source.items() if k not in {"file", "blob"}}
+
+
+def is_link(path):
+    """Include Windows junctions/reparse points on Python 3.10+, before resolve()."""
+    try:
+        return path.is_symlink() or bool(getattr(path.lstat(), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+    except FileNotFoundError:
+        return False
+
+
 def validate_tags(tags):
     if not isinstance(tags, dict) or set(tags) - set(TAG_CATEGORIES):
         raise BankError("tags: unknown category; use " + ",".join(TAG_CATEGORIES))
@@ -110,6 +177,7 @@ def validate_item(data):
     item = deepcopy(data)
     for name, limit in (("title", 120), ("summary", 240), ("stem", 20000), ("answer", 20000), ("solution", 40000)):
         text_field(item.get(name), name, limit)
+    text_only({k: item[k] for k in ("stem", "answer", "solution")})
     if "id" in item:
         text_field(item["id"], "id", 64)
     item["tags"] = validate_tags(item.get("tags"))
@@ -152,6 +220,7 @@ def validate_item(data):
         if diagram.get("format", "tikz") not in ("tikz", "pgfplots", "svg"):
             raise BankError("diagram.format: tikz/pgfplots/svg")
         text_field(diagram.get("code", ""), "diagram.code", 30000, empty=True)
+        text_only(diagram)
         if len(encoded(diagram)) > 50000:
             raise BankError("diagram: at most 50000 characters")
     sources = item.setdefault("sources", [])
@@ -174,12 +243,12 @@ def validate_item(data):
 def resolve_home(explicit=None):
     if explicit or os.environ.get("MWS_DATA_HOME"):
         path = Path(explicit or os.environ["MWS_DATA_HOME"]).expanduser().resolve()
-    elif os.name == "nt":
-        path = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData/Local"))) / "MathWorksheets"
+    elif sys.platform == "win32":
+        path = Path(os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData/Local")) / "MathWorksheets"
     elif sys.platform == "darwin":
         path = Path.home() / "Library/Application Support/MathWorksheets"
     else:
-        path = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "math-worksheets"
+        path = Path(os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local/share")) / "math-worksheets"
     path = path.resolve()
     skill = Path(__file__).resolve().parents[1]
     if path == Path(path.anchor) or path == Path.home().resolve() or path.is_relative_to(skill):
@@ -219,14 +288,66 @@ class Bank:
 
     def config(self):
         path = self.home / "config.json"
-        config = {**DEFAULT_CONFIG, **(load_json(path) if path.exists() else {})}
+        supplied = load_json(path) if path.exists() else {}
+        if not isinstance(supplied, dict):
+            raise BankError("config.json: expected an object")
+        comments = supplied.get("_comments", {})
+        if not isinstance(comments, dict) or set(comments) - set(DEFAULT_CONFIG):
+            raise BankError("config.json._comments: expected descriptions for known settings")
+        for key, value in comments.items():
+            text_field(value, "config.json._comments." + key, 1000, empty=True)
+        config = {**DEFAULT_CONFIG, **{k: v for k, v in supplied.items() if k != "_comments"}}
         if set(config) - set(DEFAULT_CONFIG):
             raise BankError("config.json: unknown field")
         if type(config["guide_max_chars"]) is not int or not 500 <= config["guide_max_chars"] <= 12000:
             raise BankError("guide_max_chars must be 500..12000")
         if type(config["backup_keep"]) is not int or not 1 <= config["backup_keep"] <= 100:
             raise BankError("backup_keep must be 1..100")
+        for key, default in DEFAULT_CONFIG.items():
+            value = config[key]
+            if type(default) is bool:
+                if type(value) is not bool:
+                    raise BankError(f"{key}: expected true/false")
+            elif type(value) not in (int, float) or not 0 < value <= 1000000:
+                raise BankError(f"{key}: expected a positive bounded number")
+            elif type(default) is int and type(value) is not int:
+                raise BankError(f"{key}: expected an integer")
+        for key in ("reference_limit", "reference_default"):
+            if config[key] > 100:
+                raise BankError(f"{key}: maximum 100")
+        if config["reference_default"] > config["reference_limit"]:
+            raise BankError("reference_default exceeds reference_limit")
+        if not 1200 <= config["context_max_chars"] <= config["context_max_chars_limit"] <= 1000000:
+            raise BankError("context character budgets must satisfy 1200 <= default <= limit <= 1000000")
+        if not 0 < config["duplicate_threshold"] <= 1:
+            raise BankError("duplicate_threshold must be in (0,1]")
+        for key in (k for k in config if k.startswith("page_margin_")):
+            if not 5 <= config[key] <= 50:
+                raise BankError(f"{key}: expected 5..50 mm")
         return config
+
+    def write_config(self, config):
+        self.home.mkdir(parents=True, exist_ok=True)
+        path = self.home / "config.json"
+        temporary = path.with_name("config." + uuid.uuid4().hex + ".tmp")
+        annotated = {k: v for k, v in config.items() if k != "_comments"}
+        annotated["_comments"] = {key: f"{CONFIG_COMMENTS[key]} 默认：{encoded(value)}。"
+                                  for key, value in DEFAULT_CONFIG.items()}
+        try:
+            temporary.write_text(json.dumps(annotated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    def tex_config(self, out):
+        config = self.config()
+        names = {"page_margin_left_mm": "MWSMarginLeft", "page_margin_right_mm": "MWSMarginRight",
+                 "page_margin_top_mm": "MWSMarginTop", "page_margin_bottom_mm": "MWSMarginBottom",
+                 "problem_gap_mm": "MWSProblemGap", "answer_problem_gap_mm": "MWSAnswerProblemGap"}
+        lines = [f"\\def\\{macro}{{{config[key]}mm}}" for key, macro in names.items()]
+        for key, macro in (("page_numbers", "MWSPages"), ("name_date_fields", "MWSNameDate"), ("header_rule", "MWSHeaderRule")):
+            lines.append(f"\\def\\{macro}{{{int(config[key])}}}")
+        Path(out).write_text("\n".join(lines) + "\n", encoding="ascii")
 
     @contextmanager
     def connection(self):
@@ -243,7 +364,7 @@ class Bank:
             con.close()
 
     @contextmanager
-    def writer(self):
+    def writer(self, allow_legacy=False):
         self.config()
         self.home.mkdir(parents=True, exist_ok=True)
         lock = (self.home / ".write.lock").open("a+b")
@@ -273,7 +394,7 @@ class Bank:
             con.row_factory = sqlite3.Row
             con.execute("PRAGMA foreign_keys=ON")
             version = con.execute("PRAGMA user_version").fetchone()[0]
-            if version not in (0, SCHEMA_VERSION):
+            if version not in ((0, 1, SCHEMA_VERSION) if allow_legacy else (0, SCHEMA_VERSION)):
                 raise BankError("incompatible database schema")
             if version == 0:
                 if con.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchone():
@@ -282,7 +403,7 @@ class Bank:
                 con.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
                 con.commit()
             if not (self.home / "config.json").exists():
-                (self.home / "config.json").write_text(encoded(DEFAULT_CONFIG) + "\n", encoding="utf-8")
+                self.write_config(self.config())
             con.execute("BEGIN IMMEDIATE")
             yield con
             con.commit()
@@ -320,18 +441,20 @@ class Bank:
         for source in records:
             if not isinstance(source, dict) or set(source) - allowed:
                 raise BankError("source: unknown fields")
-            entry = {k: v for k, v in source.items() if k not in {"file", "blob", "sha256", "size", "name"}}
+            if source.get("blob"):
+                raise BankError("source blobs are no longer supported; run migrate on a legacy bank")
+            entry = source_metadata(source)
             for key, value in entry.items():
+                if key == "size":
+                    if type(value) is not int or value < 0:
+                        raise BankError("source.size: expected nonnegative integer")
+                    continue
                 text_field(value, "source." + key, 2048, empty=True)
             if source.get("file"):
                 path = Path(source["file"]).expanduser()
                 if not path.is_absolute():
                     path = base / path
                 path = path.resolve()
-            elif source.get("blob"):
-                path = safe_child(self.home, source["blob"])
-                if not source["blob"].startswith("sources/"):
-                    raise BankError("source blob must be in sources/")
             else:
                 path = None
             if path is not None:
@@ -339,14 +462,15 @@ class Bank:
                 if not path.is_file():
                     raise BankError(f"source file missing: {path}")
                 sha = digest(path.read_bytes())
-                suffix = path.suffix.lower() if re.fullmatch(r"\.[a-zA-Z0-9]{1,8}", path.suffix) else ""
-                blob = source.get("blob") or f"sources/{sha}{suffix}"
                 if source.get("sha256") and source["sha256"] != sha:
                     raise BankError("source changed since recorded hash")
-                entry.update(blob=blob, sha256=sha, size=path.stat().st_size, name=source.get("name", path.name))
-                attachments[blob] = str(path)
-            elif not source.get("url"):
-                raise BankError("source needs an accessible file/blob or URL")
+                entry.update(sha256=sha, size=path.stat().st_size, name=source.get("name", path.name))
+            elif not source.get("url") and not source.get("name"):
+                raise BankError("source needs a filename/locator or URL as provenance")
+            if entry.get("name"):
+                text_field(entry.get("locator"), "source.locator", 240)
+            if "sha256" in entry and not re.fullmatch(r"[a-f0-9]{64}", entry["sha256"]):
+                raise BankError("source.sha256: expected 64 lowercase hex characters")
             if "url" in entry and not re.match(r"^https?://[^/\s]+", entry["url"]):
                 raise BankError("source URL must be http(s)")
             clean.append(entry)
@@ -396,14 +520,15 @@ class Bank:
         mode = "update" if explicit_id else "merge" if target else "insert"
         near = []
         needle = normalize(item["stem"])[:2000]
-        for row in rows[:300]:
+        config = self.config()
+        for row in rows[:config["duplicate_scan_limit"]]:
             if target and row["id"] == target["id"]:
                 continue
             other = json.loads(row["payload"])
             score = SequenceMatcher(None, needle, normalize(other["stem"])[:2000]).ratio()
-            if score >= 0.82:
+            if score >= config["duplicate_threshold"]:
                 near.append({"id": row["id"], "title": other["title"], "similarity": round(score, 3)})
-        near = sorted(near, key=lambda x: -x["similarity"])[:5]
+        near = sorted(near, key=lambda x: -x["similarity"])[:config["duplicate_candidate_limit"]]
         if mode == "merge":
             if normalize(item["answer"]) != normalize(before["answer"]) and decision.get("action") != "same":
                 raise BankError("existing answer differs; review and specify id for an explicit revision")
@@ -423,7 +548,8 @@ class Bank:
             blockers.append("review possible duplicates and set duplicate_decision")
         proposal = {"kind": "question", "mode": mode, "target": target["id"] if target else None,
                     "revision": target["revision"] if target else 0, "item": item,
-                    "attachments": attachments, "blockers": blockers, "near": near}
+                    "attachments": attachments, "blockers": blockers, "near": near,
+                    "policy": {k: config[k] for k in ("duplicate_scan_limit", "duplicate_threshold", "duplicate_candidate_limit", "guide_review_on_commit")}}
         return proposal, digest(proposal), before
 
     def preview(self, file):
@@ -443,16 +569,20 @@ class Bank:
         text_field(note, "approval-note (actual user reply/message reference)", 2000)
 
     def auto_backup(self):
-        if not self.db.exists():
+        if not self.db.exists() or not self.config()["auto_backup_enabled"]:
             return
         with self.connection() as con:
             if con is None or not con.execute("SELECT 1 FROM events LIMIT 1").fetchone():
                 return
         prefix = "auto-" + datetime.now().date().isoformat()
         folder = self.home / "backups"
-        if not any(folder.glob(prefix + "-*.zip")):
-            self.backup(folder / f"{prefix}-{uuid.uuid4().hex[:8]}.zip")
-        files = sorted(folder.glob("auto-*.zip"), key=lambda p: p.stat().st_mtime, reverse=True)
+        self.backup(folder / f"{prefix}-{uuid.uuid4().hex[:8]}.zip")
+        self.prune_backups()
+
+    def prune_backups(self):
+        folder = self.home / "backups"
+        files = sorted((p for p in folder.glob("auto-*.zip") if re.fullmatch(r"auto-\d{4}-\d{2}-\d{2}-[a-f0-9]{8}\.zip", p.name)),
+                       key=lambda p: (p.stat().st_mtime_ns, p.name), reverse=True)
         for old in files[self.config()["backup_keep"]:]:
             # Only generated timestamp + UUID names are eligible for retention.
             if re.fullmatch(r"auto-\d{4}-\d{2}-\d{2}-[a-f0-9]{8}\.zip", old.name):
@@ -470,23 +600,6 @@ class Bank:
             item = fresh["item"]
             identity = fresh["target"] or "q_" + uuid.uuid4().hex
             item["id"] = identity
-            for blob, source in fresh["attachments"].items():
-                target = safe_child(self.home, blob)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                data = Path(source).read_bytes()
-                expected = next(s["sha256"] for s in item["sources"] if s.get("blob") == blob)
-                if digest(data) != expected:
-                    raise BankError("source changed during commit; preview again")
-                if target.exists():
-                    if digest(target.read_bytes()) != expected:
-                        raise BankError("stored source is corrupt; repair before committing")
-                else:
-                    temp = target.with_name(target.name + "." + uuid.uuid4().hex + ".tmp")
-                    try:
-                        temp.write_bytes(data)
-                        os.replace(temp, target)
-                    finally:
-                        temp.unlink(missing_ok=True)
             revision = fresh["revision"] + 1
             con.execute("INSERT INTO problems VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET fingerprint=excluded.fingerprint,payload=excluded.payload,revision=excluded.revision,updated=excluded.updated",
                         (identity, fingerprint(item), encoded(item), revision, now()))
@@ -494,7 +607,9 @@ class Bank:
             con.executemany("INSERT INTO tags VALUES(?,?,?)", [(identity, k, v) for k, values in item["tags"].items() for v in values])
             con.execute("INSERT INTO events(time,kind,target,approval,receipt,before_json,after_json) VALUES(?,?,?,?,?,?,?)",
                         (now(), "question", identity, note, current, encoded(before) if before else None, encoded(item)))
-        return {"id": identity, "revision": revision, "mode": fresh["mode"], "home": str(self.home)}
+        reviews = [self.guide_status(stage, subject) for stage in item["tags"]["stages"] for subject in item["tags"]["subjects"]]
+        return {"id": identity, "revision": revision, "mode": fresh["mode"], "home": str(self.home),
+                "guide_review_required": self.config()["guide_review_on_commit"], "guide_reviews": reviews}
 
     def read_guide(self, stage, subject):
         relative = guide_key(stage, subject)
@@ -512,6 +627,49 @@ class Bank:
                 "sha256": sha, "revision": row["revision"] if row else 0,
                 "external_edit": row is None or row["sha256"] != sha,
                 "sources": json.loads(row["sources"]) if row else []}
+
+    def guide_status(self, stage, subject):
+        guide_key(stage, subject)
+        guide = self.read_guide(stage, subject)
+        with self.connection() as con:
+            reviews = {} if con is None else {r["question_id"]: r["question_revision"] for r in con.execute(
+                "SELECT * FROM guide_reviews WHERE stage=? AND subject=?", (stage, subject))}
+        pending, questions = [], []
+        for row in self.rows():
+            item = json.loads(row["payload"])
+            if stage in item["tags"]["stages"] and subject in item["tags"]["subjects"]:
+                entry = {"id": row["id"], "revision": row["revision"], "title": item["title"], "topics": item["tags"]["topics"]}
+                questions.append(entry)
+                if reviews.get(row["id"]) != row["revision"]:
+                    pending.append(entry)
+        return {"key": stage + "/" + subject, "guide_exists": guide is not None,
+                "guide_revision": guide["revision"] if guide else None,
+                "guide_external_edit": guide["external_edit"] if guide else False,
+                "question_count": len(questions), "pending": pending, "pending_count": len(pending)}
+
+    @staticmethod
+    def record_guide_review(con, stage, subject, questions, sha, note):
+        con.executemany("INSERT INTO guide_reviews VALUES(?,?,?,?,?,?,?) ON CONFLICT(stage,subject,question_id) DO UPDATE SET question_revision=excluded.question_revision,guide_sha256=excluded.guide_sha256,time=excluded.time,note=excluded.note",
+                        [(stage, subject, q["id"], q["revision"], sha, now(), note) for q in questions])
+
+    def review_guide(self, stage, subject, note, identities=None):
+        text_field(note, "review note (assessment and why no guide change is needed)", 2000)
+        with self.writer() as con:
+            guide = self.read_guide(stage, subject)
+            if guide is None:
+                raise BankError("no guide exists; propose and approve a guide instead")
+            pending = self.guide_status(stage, subject)["pending"]
+            if identities:
+                unknown = set(identities) - {q["id"] for q in pending}
+                if unknown:
+                    raise BankError("review ids must be pending questions for this guide")
+                pending = [q for q in pending if q["id"] in identities]
+            self.auto_backup()
+            self.record_guide_review(con, stage, subject, pending, guide["sha256"], note)
+            con.execute("INSERT INTO events(time,kind,target,approval,receipt,before_json,after_json) VALUES(?,?,?,?,?,?,?)",
+                        (now(), "guide-review", stage + "/" + subject, note, digest(pending), None,
+                         encoded({"questions": pending, "guide_sha256": guide["sha256"], "note": note})))
+        return {"reviewed": len(pending), "status": self.guide_status(stage, subject)}
 
     def prepare_guide(self, stage, subject, file, sources=None):
         relative = guide_key(stage, subject)
@@ -532,7 +690,8 @@ class Bank:
         old = self.read_guide(stage, subject)
         proposal = {"kind": "guide", "stage": stage, "subject": subject, "path": relative, "text": content,
                     "sources": refs, "base_sha256": old["sha256"] if old else None,
-                    "base_revision": old["revision"] if old else 0, "max_chars": cap}
+                    "base_revision": old["revision"] if old else 0, "max_chars": cap,
+                    "review_questions": self.guide_status(stage, subject)["pending"]}
         return proposal, digest(proposal), old
 
     def guide_preview(self, stage, subject, file, sources=None):
@@ -571,6 +730,8 @@ class Bank:
                 con.execute("INSERT INTO events(time,kind,target,approval,receipt,before_json,after_json) VALUES(?,?,?,?,?,?,?)",
                             (now(), "guide", stage + "/" + subject, note, receipt,
                              encoded(old) if old else None, encoded(proposal)))
+                self.record_guide_review(con, stage, subject, proposal["review_questions"],
+                                         digest(proposal["text"].encode("utf-8")), note)
         except BaseException:
             if written:
                 if old_bytes is None:
@@ -580,12 +741,15 @@ class Bank:
             raise
         return {"key": stage + "/" + subject, "revision": revision, "path": str(path), "characters": len(proposal["text"])}
 
-    def context(self, stage, subject, grades=(), topics=(), query="", limit=5, max_chars=10000):
+    def context(self, stage, subject, grades=(), topics=(), query="", limit=None, max_chars=None):
         guide_key(stage, subject)
-        if type(limit) is not int or not 1 <= limit <= 10:
-            raise BankError("reference limit must be 1..10, questions and guides combined")
-        if type(max_chars) is not int or not 1200 <= max_chars <= 20000:
-            raise BankError("context character budget must be 1200..20000")
+        config = self.config()
+        limit = min(config["reference_default"], config["reference_limit"]) if limit is None else limit
+        max_chars = config["context_max_chars"] if max_chars is None else max_chars
+        if type(limit) is not int or not 1 <= limit <= config["reference_limit"]:
+            raise BankError(f"reference limit must be 1..{config['reference_limit']}, questions and guides combined")
+        if type(max_chars) is not int or not 1200 <= max_chars <= config["context_max_chars_limit"]:
+            raise BankError(f"context character budget must be 1200..{config['context_max_chars_limit']}")
         terms = list(dict.fromkeys([*topics, *query.split()]))
         matches = []
         # SQL applies hard metadata filters before any payload is sent to an agent.
@@ -611,10 +775,10 @@ class Bank:
             ranked = sorted(enumerate(sections), key=lambda pair: -sum(t.lower() in pair[1].lower() for t in terms))
             excerpt, cut = "", False
             for _, section in ranked:
-                if len(excerpt) + len(section) > 2400:
+                if len(excerpt) + len(section) > config["guide_excerpt_chars"]:
                     cut = True
                     if not excerpt:
-                        excerpt = section[:2400]
+                        excerpt = section[:config["guide_excerpt_chars"]]
                     continue
                 excerpt += section
             references.append({"kind": "guide", "key": guide["key"], "path": guide["path"], "text": excerpt,
@@ -622,10 +786,10 @@ class Bank:
                                "topic_match": not terms or any(t.lower() in excerpt.lower() for t in terms)})
         for _, item in matches[:limit - len(references)]:
             references.append({"kind": "question", **{k: item[k] for k in ("id", "title", "summary", "tags", "demand", "family")},
-                               "stem": item["stem"][:1600], "answer": item["answer"][:500], "solution": item["solution"][:900],
-                               "givens": encoded(item["diagram"].get("givens", []))[:1200],
+                               "stem": item["stem"][:config["stem_excerpt_chars"]], "answer": item["answer"][:config["answer_excerpt_chars"]], "solution": item["solution"][:config["solution_excerpt_chars"]],
+                               "givens": encoded(item["diagram"].get("givens", []))[:config["givens_excerpt_chars"]],
                                "verification": item["verification"]["status"],
-                               "truncated": len(item["stem"]) > 1600 or len(item["answer"]) > 500 or len(item["solution"]) > 900 or len(encoded(item["diagram"].get("givens", []))) > 1200})
+                               "truncated": any(len(item[k]) > config[k + "_excerpt_chars"] for k in ("stem", "answer", "solution")) or len(encoded(item["diagram"].get("givens", []))) > config["givens_excerpt_chars"]})
         result = {"references": references, "reference_count": len(references), "limit": limit,
                   "max_chars": max_chars, "needs_research": not any(r["kind"] == "question" or r.get("topic_match") for r in references),
                   "note": "Use suitable local material; if insufficient, make a short official lookup. No content is saved by retrieval."}
@@ -678,11 +842,9 @@ class Bank:
                         expected = {(k, v) for k, vs in item["tags"].items() for v in vs}
                         if tags != expected:
                             errors.append("tag index mismatch: " + row["id"])
-                        for source in item["sources"]:
-                            if source.get("blob"):
-                                p = safe_child(self.home, source["blob"])
-                                if not p.is_file() or digest(p.read_bytes()) != source["sha256"]:
-                                    errors.append("missing/corrupt original: " + source["blob"])
+                        if any("file" in s or "blob" in s for s in item["sources"]):
+                            raise BankError("stored sources must be provenance metadata only")
+                        self.sources(item["sources"], self.home)
                     except (ValueError, KeyError, TypeError) as exc:
                         errors.append(f"{row['id']}: {exc}")
                 registered = [dict(row) for row in con.execute("SELECT * FROM guides")]
@@ -699,6 +861,8 @@ class Bank:
                     edits.append(guide["path"])
             except BankError as exc:
                 errors.append(str(exc))
+        if any(p.is_file() for p in (self.home / "sources").rglob("*")):
+            errors.append("legacy source attachments remain; run migrate --apply to remove them")
         return {"ok": not errors, "errors": errors, "user_edited_guides": edits, "home": str(self.home)}
 
     def backup(self, out):
@@ -721,8 +885,8 @@ class Bank:
             config = self.home / "config.json"
             if config.exists():
                 files["config.json"] = config.read_bytes()
-            for folder in ("sources", "guides"):
-                for path in sorted((self.home / folder).rglob("*")):
+            for folder in ("guides",):
+                for path in sorted((self.home / folder).glob("*/*.md")):
                     if path.is_file():
                         relative = path.relative_to(self.home).as_posix()
                         safe_child(self.home, relative)
@@ -759,8 +923,10 @@ class Bank:
                 if "bank.sqlite" not in manifest["files"]:
                     raise BankError("backup is missing database")
                 for name, expected in manifest["files"].items():
-                    if name not in {"bank.sqlite", "config.json"} and not name.startswith(("sources/", "guides/")):
-                        raise BankError("unexpected backup file")
+                    if name not in {"bank.sqlite", "config.json"}:
+                        parts = PurePosixPath(name).parts
+                        if len(parts) != 3 or parts[0] != "guides" or not name.endswith(".md") or guide_key(parts[1], Path(parts[2]).stem) != name:
+                            raise BankError("unexpected backup file")
                     target = safe_child(stage, name)
                     data = archive.read(name)
                     if digest(data) != expected:
@@ -776,6 +942,80 @@ class Bank:
                 self.home.rmdir()  # Destination was verified empty; never recursive.
             os.replace(stage, self.home)
         return {"restored": str(self.home), "questions": self.stats()["questions"]}
+
+    def migrate(self, apply=False, backup_keep=None):
+        """Explicit legacy-schema migration; preserve math text/code and provenance, remove attachments."""
+        if not self.db.exists():
+            raise BankError("no database to migrate")
+        with closing(sqlite3.connect(self.db.as_uri() + "?mode=ro", uri=True)) as con:
+            version = con.execute("PRAGMA user_version").fetchone()[0]
+            if version not in (1, SCHEMA_VERSION):
+                raise BankError("incompatible database schema")
+            rows = list(con.execute("SELECT id,payload FROM problems"))
+        converted = {}
+        for identity, payload in rows:
+            item = json.loads(payload)
+            item["sources"] = [source_metadata(s) for s in item.get("sources", [])]
+            converted[identity] = validate_item(item)
+            self.sources(item["sources"], self.home)
+        if is_link(self.home / "sources"):
+            raise BankError("source cleanup refuses links or junctions")
+        folder = safe_child(self.home, "sources")
+        paths = list(folder.rglob("*")) if folder.exists() else []
+        if any(not p.resolve().is_relative_to(folder) or is_link(p) for p in paths):
+            raise BankError("source cleanup refuses links or paths outside the named sources directory")
+        config = self.config()
+        if backup_keep is not None:
+            if type(backup_keep) is not int or not 1 <= backup_keep <= 100:
+                raise BankError("backup_keep must be 1..100")
+            config["backup_keep"] = backup_keep
+        plan = {"from_schema": version, "to_schema": SCHEMA_VERSION, "questions": len(rows),
+                "source_files_to_remove": sum(p.is_file() for p in paths),
+                "source_bytes_to_remove": sum(p.stat().st_size for p in paths if p.is_file()),
+                "backup_keep": config["backup_keep"], "applied": False,
+                "note": "Text/code, complete solutions, ids and revisions are preserved. Source filenames/hashes remain as provenance. Tool-owned backups follow retention; manual backups are untouched."}
+        if not apply:
+            return plan
+        def clean_history(value):
+            if isinstance(value, list):
+                return [clean_history(v) for v in value]
+            if isinstance(value, dict):
+                return {k: ([source_metadata(s) for s in v] if k == "sources" and isinstance(v, list) else clean_history(v))
+                        for k, v in value.items() if k != "attachments"}
+            return value
+        # All validations precede mutations. No source bytes enter the new snapshot.
+        with self.writer(allow_legacy=True) as con:
+            current = dict(con.execute("SELECT id,payload FROM problems"))
+            if current != dict(rows):
+                raise BankError("bank changed during migration; retry the dry run")
+            con.execute("CREATE TABLE IF NOT EXISTS guide_reviews (stage TEXT NOT NULL, subject TEXT NOT NULL, question_id TEXT NOT NULL REFERENCES problems(id) ON DELETE CASCADE, question_revision INTEGER NOT NULL, guide_sha256 TEXT NOT NULL, time TEXT NOT NULL, note TEXT NOT NULL, PRIMARY KEY(stage,subject,question_id))")
+            for identity, item in converted.items():
+                con.execute("UPDATE problems SET payload=? WHERE id=?", (encoded(item), identity))
+            for row in list(con.execute("SELECT id,before_json,after_json FROM events")):
+                before = encoded(clean_history(json.loads(row[1]))) if row[1] else None
+                after = encoded(clean_history(json.loads(row[2])))
+                con.execute("UPDATE events SET before_json=?,after_json=? WHERE id=?", (before, after, row[0]))
+            con.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+            con.execute("INSERT INTO events(time,kind,target,approval,receipt,before_json,after_json) VALUES(?,?,?,?,?,?,?)",
+                        (now(), "migration", "schema", "explicit migrate --apply", digest(plan), None, encoded(plan)))
+            con.commit()  # Keep the writer lock through snapshot validation and attachment cleanup.
+            self.write_config(config)
+            backup = self.home / "backups" / ("auto-" + datetime.now().date().isoformat() + "-" + uuid.uuid4().hex[:8] + ".zip")
+            snapshot = self.backup(backup)
+            # Verify the new archive before removing managed source files/old automatic backups.
+            with zipfile.ZipFile(backup) as archive:
+                if archive.testzip() is not None or any(n.startswith("sources/") for n in archive.namelist()):
+                    raise BankError("migration snapshot failed validation; source files retained")
+            for path in sorted(paths, key=lambda p: len(p.parts), reverse=True):
+                if path.is_file():
+                    path.unlink()
+                elif path.is_dir():
+                    path.rmdir()
+            if folder.exists():
+                folder.rmdir()
+            self.prune_backups()
+            plan.update(applied=True, backup=snapshot["backup"], doctor=self.doctor())
+            return plan
 
     def export(self, out):
         out = Path(out).resolve()
@@ -806,6 +1046,20 @@ def main(argv=None):
     commands = parser.add_subparsers(dest="command", required=True)
     for name in ("schema", "stats", "doctor", "init"):
         commands.add_parser(name)
+    config = commands.add_parser("config")
+    config.add_argument("--init", action="store_true", help="materialize complete config without creating a database")
+    config.add_argument("--tex-out", help="write numeric/boolean PDF settings as TeX definitions")
+    config.add_argument("--get", choices=sorted(DEFAULT_CONFIG))
+    migration = commands.add_parser("migrate")
+    migration.add_argument("--apply", action="store_true", help="apply an inspected migration; default is read-only")
+    migration.add_argument("--backup-keep", type=int)
+    status = commands.add_parser("guide-status")
+    review = commands.add_parser("guide-review")
+    for command in (status, review):
+        command.add_argument("--stage", required=True, choices=STAGES)
+        command.add_argument("--subject", required=True)
+    review.add_argument("--note", required=True)
+    review.add_argument("--id", action="append", default=[])
     for name in ("preview", "commit"):
         command = commands.add_parser(name)
         command.add_argument("--file", required=True)
@@ -828,11 +1082,11 @@ def main(argv=None):
     context.add_argument("--grade", action="append", default=[])
     context.add_argument("--topic", action="append", default=[])
     context.add_argument("--query", default="")
-    context.add_argument("--limit", type=int, default=5)
-    context.add_argument("--max-chars", type=int, default=10000)
+    context.add_argument("--limit", type=int)
+    context.add_argument("--max-chars", type=int)
     show = commands.add_parser("show")
     show.add_argument("id")
-    show.add_argument("--fields", default="title,summary,stem,answer,solution,tags,demand,verification")
+    show.add_argument("--fields", default="title,summary,stem,answer,solution,tags,demand,diagram,verification,sources,origin,family,uncertainties")
     commands.add_parser("backup").add_argument("--out", required=True)
     commands.add_parser("restore").add_argument("--file", required=True)
     commands.add_parser("export").add_argument("--out", required=True)
@@ -843,8 +1097,24 @@ def main(argv=None):
     try:
         bank = Bank(args.home)
         if args.command == "schema":
-            result = {"schema_version": SCHEMA_VERSION, "max_tags_per_category": 5, "max_references": 10,
-                      "default_guide_max_chars": 6000, "question_example": example()}
+            result = {"schema_version": SCHEMA_VERSION, "max_tags_per_category": 5, "max_references": bank.config()["reference_limit"],
+                      "config_defaults": DEFAULT_CONFIG, "question_example": example()}
+        elif args.command == "config":
+            settings = bank.config()
+            if args.init:
+                bank.write_config(settings)
+            if args.tex_out:
+                bank.tex_config(args.tex_out)
+            if args.get:
+                print(encoded(settings[args.get]))
+                return 0
+            result = {"path": str(bank.home / "config.json"), "config": settings}
+        elif args.command == "migrate":
+            result = bank.migrate(args.apply, args.backup_keep)
+        elif args.command == "guide-status":
+            result = bank.guide_status(args.stage, args.subject)
+        elif args.command == "guide-review":
+            result = bank.review_guide(args.stage, args.subject, args.note, args.id)
         elif args.command in ("stats", "doctor"):
             result = getattr(bank, args.command)()
         elif args.command == "init":

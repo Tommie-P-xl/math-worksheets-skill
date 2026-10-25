@@ -438,13 +438,13 @@ def main():
         except (ValueError, TypeError, KeyError, OSError) as exc:
             print(f"Source review failed: {exc}", file=sys.stderr)
             return 1
-    tex = open(path).read()
+    tex = open(path, encoding="utf-8").read()
     # Expand rendered \probfig{N} figures in place so both rules run on what
     # actually prints. Unresolved calls (stale figs, no --figs) stay in the
     # text — has_valued_figure counts them as valued, so the scope rule holds
     # either way.
     if figs_path:
-        tex, _ = expand_probfigs(tex, probfig_bodies(open(figs_path).read()))
+        tex, _ = expand_probfigs(tex, probfig_bodies(open(figs_path, encoding="utf-8").read()))
     # blank comments AFTER expansion so rendered figure bodies are cleaned too
     tex = strip_comments(tex)
     layouts = re.findall(r"\\worksheetlayout\s*\{([^{}]*)\}", tex)

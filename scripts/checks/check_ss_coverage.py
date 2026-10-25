@@ -46,7 +46,7 @@ def loose(s):
 
 
 def load_problems(path):
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = json.load(f)
     return [p for p in data.get("problems", []) if isinstance(p, dict)]
 

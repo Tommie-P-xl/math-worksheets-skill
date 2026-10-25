@@ -114,6 +114,10 @@ mkdir -p "$OUT_DIR"
 # satisfies both, so a /tmp compile just works.
 TEX_DIR="$(cd "$(dirname "$TEX_FILE")" && pwd)"
 TPL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/templates"
+source "$SCRIPT_DIR/find_python.sh"
+CONFIG_PY="${MWS_PYTHON:-$(find_sympy_python)}"
+[[ -n "$CONFIG_PY" ]] || exit 1
+"$CONFIG_PY" "$SCRIPT_DIR/question_bank.py" config --tex-out "$TEX_DIR/mws-settings.tex" >/dev/null || exit 1
 if grep -qE '\\input\{(worksheet-preamble|figure-macros)(\.tex)?\}' "$TEX_FILE"; then
   if [[ ! -d "$TPL_DIR" ]]; then
     echo "Error: $(basename "$TEX_FILE") \\inputs a shipped template, but" >&2

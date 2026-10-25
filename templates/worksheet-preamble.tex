@@ -1,43 +1,32 @@
-% worksheet-preamble.tex — the shipped preamble every generated document
-% \input's. SOURCE OF TRUTH: this file. references/latex-templates.md documents
-% these macros but no longer serves as the text agents transcribe — retyping a
-% ~130-line preamble per document, three documents per run, is exactly the
-% transcription-drift error class the rest of the pipeline exists to catch.
-%
-% Usage (compile.sh stages this file beside your .tex automatically):
-%   \documentclass[12pt]{article}
-%   \usepackage[margin=1in, top=0.75in, bottom=0.75in]{geometry}
-%   \input{worksheet-preamble}
-%   \input{figure-macros}          % when using the shipped figure macros
-%
-% geometry stays in the document, NOT here: worksheets use margin=1in
-% (top/bottom 0.75in) while study guides use margin=0.85in (top/bottom 0.7in),
-% and geometry options cannot be re-issued once the package is loaded.
-%
-% ASCII only in this file: pdflatex (the fallback engine) cannot typeset
-% literal Unicode symbols, so documents must compile identically under both
-% tectonic and pdflatex.
-
-% ── Required packages (superset of the worksheet and study-guide shells; a
-% worksheet loading mdframed it does not use costs nothing, one shared file
-% that cannot drift is worth it) ─────────────────────────────────────────────
 \usepackage{amsmath, amssymb}
 \usepackage{tikz, pgfplots}
 \usepackage{enumitem, fancyhdr, multicol, array, booktabs}
+% Shared, language-neutral worksheet components. compile.sh refreshes mws-settings.tex.
+\providecommand{\MWSMarginLeft}{12mm}
+\providecommand{\MWSMarginRight}{12mm}
+\providecommand{\MWSMarginTop}{12mm}
+\providecommand{\MWSMarginBottom}{12mm}
+\providecommand{\MWSProblemGap}{1.5mm}
+\providecommand{\MWSAnswerProblemGap}{2mm}
+\providecommand{\MWSPages}{1}
+\providecommand{\MWSNameDate}{0}
+\providecommand{\MWSHeaderRule}{0}
+\InputIfFileExists{mws-settings.tex}{}{}
+\usepackage{geometry}
+\geometry{left=\MWSMarginLeft,right=\MWSMarginRight,top=\MWSMarginTop,bottom=\MWSMarginBottom,includehead=false,includefoot=false,headheight=15pt,headsep=3mm,footskip=6mm}
+\setlength{\parindent}{0pt}
+\setlist{nosep,leftmargin=*}
+\makeatletter
+\@ifpackageloaded{xeCJK}{\xeCJKsetup{PunctStyle=plain}}{}
+\makeatother
+\newcommand{\mwsnamelabel}{}
+\newcommand{\mwsdatelabel}{}
+\newcommand{\mwsstemlabel}{}
+\newcommand{\mwsleaflabel}{}
+
 \usepackage{mdframed, xcolor}
-% adjustbox: shrink an oversized figure to the text width instead of letting it
-% run into the margin. The lever it replaces is worse — an author who cannot fit
-% a figure otherwise redraws it smaller by hand, or drops detail from it.
 \usepackage{adjustbox}
-% compat=1.18 is a HARD floor, not a preference: the graph and chart house
-% styles below are written against 1.18 semantics. pgfplots' own refusal is
-% accurate but points the wrong way — "Sorry, 'compat=1.18' is unknown in this
-% context. Please use at most 'compat=1.16'" reads as an instruction to lower
-% the number, which silently changes axis scaling and tick placement under
-% every shipped style. The real fix is a newer TeX, and only the distribution
-% knows that. tectonic always downloads a current pgfplots, so this can only
-% bite on the pdflatex fallback on an older distro (Ubuntu 20.04 ships 1.16),
-% which is exactly the user least likely to guess why.
+\usepackage{needspace}
 \makeatletter
 \@ifpackagelater{pgfplots}{2021/05/15}{}{%
   \PackageError{worksheet-preamble}{%
@@ -50,12 +39,6 @@
   }}
 \makeatother
 \pgfplotsset{compat=1.18}
-% TikZ libraries. Each one below is loaded because a MATH worksheet needs it;
-% see references/latex-templates.md for which problem shapes use which, with
-% worked snippets. Measured cost of the four added here plus the three pgfplots
-% libraries plus adjustbox: 0.443s -> 0.517s per document on an empty file, so
-% about two minutes across a 1800-document run. Cheap enough to load once for
-% every document rather than have authors guess which to request.
 \usetikzlibrary{calc, angles, quotes,   % the geometric figure macros
                 arrows.meta,            % -{Stealth} number lines, vectors, maps
                 patterns,               % shaded fraction / area models
@@ -67,61 +50,12 @@
                     statistics,         % BOXPLOTS, binding to the stats type
                     groupplots}         % side-by-side comparison axes
 
-% NOT loaded, deliberately, so the reason survives the next person who reads a
-% package list and starts adding:
-%   forest      tree diagrams. Real math content (factor trees, probability
-%               trees), but it costs +0.22s per document on top of everything
-%               above -- more than every other addition combined -- and TikZ's
-%               built-in tree layout draws both. Use \node ... child { }.
-%   tikz-cd     commutative diagrams. Category theory, not K-12 or intro
-%               college worksheets.
-%   circuitikz, chemfig, quantikz, bytefield
-%               circuits, chemistry, quantum gates, packet layouts. Not maths.
-%   standalone  precompiling figures to separate PDFs. It would break the
-%               guarantee this pipeline is built on: figures are generated from
-%               the verify JSON at build time so a figure CANNOT disagree with
-%               the answer it illustrates. A precompiled PDF is an artifact that
-%               can go stale against the JSON. Compile time is also not the
-%               bottleneck here -- a whole document is about half a second.
-
-% ── Answer location (constructed, never hand-typed) ─────────────────────────
-% A worksheet problem with workspace but no designated answer blank makes the
-% grader hunt through scratch work for the final answer, and the student never
-% commits to one. The blank is CONSTRUCTED: \problem emits it automatically
-% whenever its workspace argument is positive, so generators cannot forget it
-% and cannot misplace it. All dimensions live HERE, not at call sites — the
-% generated .tex carries no rule lengths for the prose-number checker to
-% misread as problem values.
-%
-%   \ansline   right-aligned "Answer: ____" — emitted by \problem itself;
-%              enumerate/\item sheets call it explicitly at the end of each
-%              item (tests/check_layout.py enforces one answer-location macro
-%              per item there)
-%   \ansblank  inline blank for drill formats: "$7 + 5 =$~\ansblank"
-%   \noansline opt-out for problems whose worked product IS the answer
-%              (graph sketch, proof, construction) — prints nothing, just
-%              suppresses the auto-emitted line for the current \problem
-%   \answerline{unit}  answer blank with the measurement unit printed after
-%              it, e.g. \answerline{ft} — the unit must match the problem's
-%              "answer_unit" in the verify JSON (tests/check_answer_line.py
-%              enforces the pairing in both directions). Also suppresses the
-%              auto \ansline so a unit problem never gets two blanks.
-%   \scratchblank  a blank that is NOT an answer: a scaling multiplier, a
-%              partial product the student carries forward, a table cell used
-%              as working space. Prints exactly like \ansblank and clears the
-%              auto-line flag the same way, but tests/check_answer_slots.py
-%              does not require a verify entry for it. Using it is a claim —
-%              "no answer worth checking lands here" — so do not reach for it
-%              to quiet the slot gate on a blank that really does hold an
-%              answer. That gate exists because 172 of 300 reviewed cases
-%              shipped a printed answer nobody verified.
 \makeatletter
 \newif\ifmws@sans
 \newif\ifmws@bigblanks
 \newif\ifmws@ans
 \newif\ifmws@spacious
 \mws@spaciousfalse
-% Compact is the default. Declare spacious only for requested writing room.
 \newcommand{\worksheetlayout}[1]{%
   \def\mws@layout{#1}\def\mws@spaceword{spacious}%
   \ifx\mws@layout\mws@spaceword\global\mws@spacioustrue
@@ -129,60 +63,27 @@
 \mws@anstrue
 \newdimen\mws@wsdim
 \newcommand{\noansline}{\global\mws@ansfalse}
-% \ansline and \ansblank BOTH clear the flag, which is what makes the auto
-% answer line observant instead of unconditional. \problem typesets its stem
-% BEFORE testing the flag, so any answer location the stem already contains —
-% a per-part \ansline in a nested (a)/(b)/(c) list, or an inline \ansblank in
-% a drill — has cleared the flag by the time the test runs, and the parent's
-% single trailing line is suppressed. One "Answer: ____" under a problem whose
-% three sub-parts each need their own answer is worse than none: it invites the
-% student to commit one value for a question that has three.
-% Self-clearing is harmless for the parent's own auto-emitted line: it fires
-% after the test, and \problem re-arms the flag at the start of every problem.
-% Blank length and rule weight grow in an accessibility mode: a student who
-% needs 17pt type also needs a blank big enough to write 17pt digits in.
-\newcommand{\ansline}{\global\mws@ansfalse\par\nopagebreak\vspace{2pt}\noindent\hfill Answer: \ifmws@bigblanks\rule[-2pt]{5cm}{0.8pt}\else\rule[-1pt]{3.5cm}{0.4pt}\fi}
+\newcommand{\ansline}{\global\mws@ansfalse\par\nopagebreak\vspace{2pt}\noindent\hfill \ifmws@bigblanks\rule[-2pt]{5cm}{0.8pt}\else\rule[-1pt]{3.5cm}{0.4pt}\fi}
 \newcommand{\ansblank}{\global\mws@ansfalse\ifmws@bigblanks\rule[-2pt]{2.6cm}{0.8pt}\else\rule[-1pt]{1.8cm}{0.4pt}\fi}
-% Same rule on the page as \ansblank, deliberately NOT an answer slot. See the
-% header note: check_answer_slots.py skips it, so it must only mark working
-% space. Defined via \ansblank so the two can never drift apart visually.
 \newcommand{\scratchblank}{\ansblank}
-\newcommand{\answerline}[1]{\global\mws@ansfalse\par\nopagebreak\vspace{4pt}\hfill\textbf{Answer:}\ \rule[-2pt]{3.5cm}{0.4pt}\ #1}
+\newcommand{\answerline}[1]{\global\mws@ansfalse\par\nopagebreak\vspace{4pt}\hfill\rule[-2pt]{3.5cm}{0.4pt}\ #1}
 
-% ── Problem numbering ───────────────────────────────────────────────────────
 \newcounter{prob}
-% \problem[workspace]{stem} — number, stem, and workspace live in ONE minipage
-% because LaTeX discards \vspace glue at page/column breaks: workspace left
-% outside the box vanishes exactly when a problem lands at a page bottom, and
-% on a multi-page sheet that hits several problems per sheet. The minipage is
-% unbreakable, so stem + workspace always move to the next page together.
-% Default 0pt: answer keys and study guides reuse \problem and must not
-% inherit worksheet-sized gaps.
-% The answer line is emitted only when workspace > 0pt (so ak_/ss_ documents
-% and multi-part parents stay untouched) and only if the stem did not opt out.
-% The opt-out flag is reset at the START of each \problem, not the end — a
-% \noansline inside an enumerate item must never leak into a later \problem.
-\newcommand{\problem}[2][0pt]{\par\ifmws@akmode\vspace{0.5cm plus 0.45cm minus 0.15cm}\else\ifmws@spacious\vspace{0.4cm}\else\vspace{0.15cm}\fi\fi\global\mws@anstrue\noindent\begin{minipage}{\linewidth}\stepcounter{prob}\noindent\textbf{\large\theprob.}\quad #2\par\vspace*{#1}\mws@wsdim=#1\relax\ifdim\mws@wsdim>0pt\ifmws@ans\ansline\fi\fi\end{minipage}\par}
+% Compact questions may span pages. Only requested work space needs an indivisible box.
+\newcommand{\problem}[2][0pt]{%
+  \par\ifmws@akmode\vspace{\MWSAnswerProblemGap}%
+  \else\ifmws@spacious\vspace{0.4cm}\else\vspace{\MWSProblemGap}\fi\fi
+  \global\mws@anstrue\mws@wsdim=#1\relax
+  \ifdim\mws@wsdim>0pt
+    \noindent\begin{minipage}{\linewidth}%
+    \stepcounter{prob}\noindent\textbf{\large\theprob.}\quad #2\par\vspace*{#1}%
+    \ifmws@ans\ansline\fi\end{minipage}%
+  \else
+    \needspace{3\baselineskip}\stepcounter{prob}%
+    \noindent\textbf{\large\theprob.}\quad #2\par
+  \fi\par}
 \makeatother
 
-% ── Accessibility modes ─────────────────────────────────────────────────────
-% A student whose IEP or 504 plan entitles them to large-print materials could
-% not use this tool at all before these existed. Type SIZE must come from the
-% document class (article offers only 10/11/12pt), so a large-print sheet opens
-%   \documentclass[14pt]{extarticle}   % or 17pt
-% and everything below adapts the rest of the page to it.
-%
-%   \accessiblemode{large}     roomier leading and bigger answer blanks
-%   \accessiblemode{dyslexia}  sans-serif text AND math, 1.5 leading, no italics
-%   \accessiblemode{both}      both
-%
-% The dyslexia settings follow the British Dyslexia Association style guide:
-% sans-serif faces, generous line spacing, and no italics (italic letterforms
-% are the ones most often reported as blurring). sfmath switches MATH to sans
-% too, which matters more here than in prose: a worksheet is mostly math, and
-% leaving formulas in serif would defeat the point.
-% The page budget needs no change: it is computed from content, so a larger
-% type size simply produces more pages, which is the honest outcome.
 \usepackage{setspace}
 \makeatletter
 \newcommand{\accessiblemode}[1]{%
@@ -193,35 +94,11 @@
   \ifx\mws@am\mws@amboth\global\mws@sanstrue\setstretch{1.5}\global\mws@bigblankstrue\fi
   \ifmws@sans
     \renewcommand{\familydefault}{\sfdefault}%
-    % sans MATH as well as sans prose: a worksheet is mostly math, so leaving
-    % formulas in serif would defeat the purpose of the mode
     \@ifundefined{sfmath@loaded}{\RequirePackage{sfmath}\global\let\sfmath@loaded\relax}{}%
-    % italic letterforms are the ones most often reported as blurring, so
-    % emphasis becomes bold instead of italic
     \renewcommand{\emph}[1]{\textbf{##1}}%
   \fi}
 \makeatother
 
-% ── Locale ──────────────────────────────────────────────────────────────────
-% Supporting A4 paper but not the notation that goes with it is half a job. Most
-% of the countries that use A4 write the decimal COMMA: a student in Germany or
-% France reading "1.5" parses that period as a thousands separator, so this is a
-% correctness problem, not a cosmetic one. The multiplication sign differs too
-% (\times is taught where \cdot is not, and vice versa).
-%
-%   \mwslocale{us}   1.5   a \cdot b     (default)
-%   \mwslocale{eu}   1,5   a \times b
-%
-% The verify JSON always stays canonical (period decimals, ASCII operators) so
-% the verifier and every gate keep one unambiguous number format. Only the
-% PRINTED form is localised, via these macros:
-%
-%   \dec{3.75}   prints 3.75 or 3,75
-%   \mtimes      prints \cdot or \times
-%
-% Use \dec{} for every decimal in problem text and answer keys when a locale is
-% set; a bare 3.75 in the source prints a period regardless and is the one way
-% to defeat this.
 \makeatletter
 \newif\ifmws@eu
 \newcommand{\mwslocale}[1]{%
@@ -233,155 +110,60 @@
 \newcommand{\mtimes}{\ifmws@eu\times\else\cdot\fi}
 \makeatother
 
-% ── Common wrong answers (answer key) ───────────────────────────────────────
-% The key proves the RIGHT answer but says nothing about how to grade a wrong
-% one. The verify JSON already declares "traps": the misconception, the
-% expression a student following it would evaluate, and the value it produces —
-% all machine-checked. Printing that turns grading into teaching: seeing 7.37
-% tells the grader the student used cos where tan was needed, which is a
-% different conversation from "wrong, minus two".
-% Rendered from the JSON by scripts/render_quick_answers.py, never hand-typed.
-% Opens AND closes its own paragraph. Without the trailing \par the next thing
-% in the block — the closing \rule{\linewidth} — joined this text line and
-% overflowed it by ~200pt, so EVERY answer key carrying a declared trap failed
-% compile-ak. Found by an eval-run agent, not by a test: the feature shipped
-% with no fixture that declared a trap and compiled the key.
-\newcommand{\commonerror}[3]{\par\noindent{\small #1.~\textit{If they got #2: #3}}\par}
-% ANSWER KEY ONLY. Marks a printed response that no verification entry covers,
-% so the instructor can see at a glance which answers carry a machine guarantee
-% and which are theirs to check. Bold, because the failure this exists to
-% prevent is a grader assuming a complete-looking row was verified. Emitted by
-% scripts/render_quick_answers.py, never hand-typed — and never \ans/\boxed, so
-% check_answer_key.py's per-problem binding of CORRECT answers stays strict.
-\newcommand{\unchecked}{\textbf{[unchecked]}}
+\newcommand{\commonerror}[3]{\par\noindent{\small #1.~\textit{#2: #3}}\par}
+\newcommand{\unchecked}{\textbf{[?]}}
 
-% ── Shrink-to-fit title: \LARGE when it fits on one line, otherwise scale
-% down to the text width — never enlarges, never wraps mid-phrase. (\resizebox
-% comes from graphicx, which tikz already loads.) ────────────────────────────
 \newlength{\fittedw}
 \newcommand{\fittedtitle}[1]{%
   \settowidth{\fittedw}{\LARGE\bfseries #1}%
   \ifdim\fittedw>\linewidth\resizebox{\linewidth}{!}{\bfseries #1}%
   \else{\LARGE\bfseries #1}\fi}
 
-% ── Running headers ─────────────────────────────────────────────────────────
-% The running head is ONE line split into two fixed-width boxes: title on the
-% left, blanks or a continuation marker on the right. fancyhdr sets [L] and [R]
-% at their natural widths, so a title longer than the leftover space simply
-% overprinted the Name/Date blanks — and because a running head repeats, the
-% collision appeared on EVERY page. Both boxes are now shrink-to-fit within a
-% reserved width, so the head can never collide and can never wrap to a second
-% line (a wrapped head overprints the body text below it).
-% Keeping the title short (<= ~28 chars) is still the right habit: shrink-to-fit
-% keeps a long one legible and on one line, it does not make it pretty.
-% Ask GEOMETRY for the taller head rather than patching \headheight after the
-% fact. geometry computes \topmargin, \headsep and \textheight together; a raw
-% \setlength afterwards changes one of them and leaves the rest derived from the
-% old value, so the header drifts into the headsep gap and the body sits a few
-% points off where every other measurement assumes. \geometry{} re-runs the whole
-% computation, which is the only way to keep the page self-consistent.
 \geometry{headheight=15pt}
 \makeatletter
 \newlength{\mws@boxw}
-% left-aligned / right-aligned single-line box of exactly the given width
 \newcommand{\mws@fitl}[2]{\setlength{\mws@boxw}{#1}\settowidth{\fittedw}{#2}%
   \ifdim\fittedw>\mws@boxw\resizebox{\mws@boxw}{!}{#2}\else\makebox[\mws@boxw][l]{#2}\fi}
 \newcommand{\mws@fitr}[2]{\setlength{\mws@boxw}{#1}\settowidth{\fittedw}{#2}%
   \ifdim\fittedw>\mws@boxw\resizebox{\mws@boxw}{!}{#2}\else\makebox[\mws@boxw][r]{#2}\fi}
-% title box = whatever the reserved right-hand box leaves, minus a gutter.
-% \headwidth is evaluated at shipout, when fancyhdr has finished setting it.
 \newcommand{\mws@headtitle}[2]{%
   \mws@fitl{\dimexpr\headwidth-#1-0.5cm\relax}{\small\bfseries #2}}
 
-% \wsheader{Short Title} — student worksheet
-% Optional branding: set your school or teacher name once and it prints in the
-% footer (bottom-left) of every generated page. Empty by default = no branding.
-% To brand every worksheet, change the line below to e.g.
-%   \newcommand{\schoolname}{Riverside Middle School}
-% or override per-document by placing that \renewcommand after \input.
 \newcommand{\schoolname}{}
 
-% The Name/Date blanks belong on page 1 only. A student fills them in once;
-% repeating them on every page asks for the same information four times and
-% eats the header width that the title needs. Continuation pages carry the
-% title and a "(continued)" marker instead, and the footer's page number
-% already identifies each sheet.
 \newlength{\mws@wsright}
 \setlength{\mws@wsright}{8.4cm}    % reserved for the Name/Date blanks
+\newcommand{\mws@footer}{%
+  \ifnum\MWSPages=1\fancyfoot[C]{\thepage}\fi
+  \fancyfoot[L]{\small\schoolname}%
+  \renewcommand{\headrulewidth}{\ifnum\MWSHeaderRule=1 0.4pt\else 0pt\fi}}
+\pagestyle{fancy}\fancyhf{}\mws@footer
 \newcommand{\wsheader}[1]{%
-  \fancypagestyle{mwsfirst}{%
-    \fancyhf{}%
-    \fancyhead[L]{\mws@headtitle{\mws@wsright}{#1}}%
-    \fancyhead[R]{\mws@fitr{\mws@wsright}{\small Name: \underline{\hspace{4.1cm}}\ Date: \underline{\hspace{1.8cm}}}}%
-    \fancyfoot[C]{\thepage}%
-    \fancyfoot[L]{\small\schoolname}%
-    \renewcommand{\headrulewidth}{0.4pt}}%
-  \fancypagestyle{mwscont}{%
-    \fancyhf{}%
-    \fancyhead[L]{\mws@headtitle{2.6cm}{#1}}%
-    \fancyhead[R]{\mws@fitr{2.6cm}{\small\itshape (continued)}}%
-    \fancyfoot[C]{\thepage}%
-    \fancyfoot[L]{\small\schoolname}%
-    \renewcommand{\headrulewidth}{0.4pt}}%
-  \pagestyle{mwscont}%
-  \AtBeginDocument{\thispagestyle{mwsfirst}}}
+  \pagestyle{fancy}\fancyhf{}%
+  \fancyhead[L]{\mws@headtitle{0cm}{#1}}%
+  \mws@footer
+  \ifnum\MWSNameDate=1
+    \AtBeginDocument{\noindent\mwsnamelabel\ \underline{\hspace{4cm}}\quad\mwsdatelabel\ \underline{\hspace{3cm}}\par\smallskip}%
+  \fi}
 
-% Answer keys breathe; worksheets are measured. The key's reader is a grader
-% scanning worked solutions, and a page of them set solid reads as a wall —
-% so in ak mode the inter-problem space is RUBBER (0.5cm that can stretch
-% toward a full centimetre or give back 0.15cm), \raggedbottom lets a page
-% end early instead of stretching solutions apart to fill it, and a small
-% \parskip separates paragraphs inside a worked solution. None of this
-% touches the worksheet: its work space is a per-problem measurement the
-% page budget charges for, and stretch there would be the budget lying.
 \newif\ifmws@akmode
 
-% \akheader{Short Topic} — answer key
-% Also switches \ans{...} to the COMPACT boxed form: check_answer_key.py binds
-% printed answers through the \ans/\boxed macro names, so a space-saving layout
-% must keep the macro name and change only what it typesets — a new macro
-% (\aksol etc.) would be invisible to the gate. The TeXbook end-of-proof idiom
-% below puts the \fbox on the same line as the last worked step when it fits
-% and flush-right on the next line when it does not; a bare \hfill\fbox would
-% instead produce Overfull \hbox on long answers, which scripts/check_log.py
-% rightly turns into build failures. Study guides keep the \boldsymbol form
-% (\ssheader never redefines \ans).
 \newcommand{\akheader}[1]{%
   \pagestyle{fancy}\fancyhf{}%
-  % The right slot carries nothing: "For instructor/parent use" restated what
-  % "Answer Key" already says, and every centimetre it held was width the title
-  % could not use — which is what forced the title to shrink. Reserve 0cm and
-  % the title gets the whole head. Rule: the header's right slot is for
-  % information the reader must ACT on (the Name/Date blanks). Labels that only
-  % restate the document type belong nowhere.
-  \fancyhead[L]{\mws@headtitle{0cm}{#1 --- Answer Key}}%
-  \fancyfoot[C]{\thepage}%
-  \fancyfoot[L]{\small\schoolname}%
-  \renewcommand{\headrulewidth}{0.4pt}%
+  \fancyhead[L]{\mws@headtitle{0cm}{#1}}%
+  \mws@footer%
   \mws@akmodetrue
   \raggedbottom
   \setlength{\parskip}{2pt plus 1.5pt}%
-  % Keep the compact box valid in both authoring forms. In prose, retain the
-  % flush-right end-of-proof layout; inside `$...$`, stay in math mode instead
-  % of emitting paragraph glue (or a second pair of math delimiters).
   \renewcommand{\ans}[1]{\ifmmode\boxed{##1}\else{\unskip\nobreak\hfil\penalty50\hskip1em\null\nobreak\hfil\mbox{\fbox{\ensuremath{\,##1\,}}}\parfillskip=0pt\finalhyphendemerits=0\par}\fi}}
 
-% \ssheader{Topic} — skills summary / study guide
 \newcommand{\ssheader}[1]{%
   \pagestyle{fancy}\fancyhf{}%
-  % Same rule as \akheader: "Study Guide & Reference" restated "Skills Summary".
-  \fancyhead[L]{\mws@headtitle{0cm}{Skills Summary: #1}}%
-  \fancyfoot[C]{\thepage}%
-  \fancyfoot[L]{\small\schoolname}%
-  \renewcommand{\headrulewidth}{0.4pt}}
+  \fancyhead[L]{\mws@headtitle{0cm}{#1}}%
+  \mws@footer}
 
 \makeatother
 
-% ── Title blocks ────────────────────────────────────────────────────────────
-% \mwssubtitle{Course}{Date} — the "Course * Date" line under the title. Either
-% field may be empty: an empty Date drops the bullet and the date (leave Date
-% empty for a reusable, undated sheet — the header already carries a fill-in
-% Name/Date blank), an empty Course drops that side, both empty prints nothing.
 \makeatletter
 \newcommand{\mwssubtitle}[2]{%
   \def\mwssubA{#1}\def\mwssubB{#2}%
@@ -392,48 +174,11 @@
   \fi}
 \makeatother
 
-% \wstitleblock{Title}{Course}{Date} — Date is optional; pass an empty third
-% argument for an undated, reusable worksheet.
-%
-% THE COURSE ARGUMENT IS ACCEPTED AND NOT PRINTED. A grade level on the sheet a
-% student holds tells the student nothing they need and can tell them something
-% unhelpful: a child working a grade below, or above, reads the label before the
-% mathematics. The level belongs to the adult choosing the sheet, so it prints on
-% the answer key — with the curriculum codes, where it is actually useful — and
-% nowhere the student sees. The argument stays in the signature so existing
-% documents keep compiling and so the level remains declared in one obvious
-% place for the answer key's curriculum section to pick up.
 \newcommand{\wstitleblock}[3]{%
-  \begin{center}
-    \fittedtitle{#1}\\[0.3cm]
-    \mwssubtitle{}{#3}
-  \end{center}
-  \noindent\rule{\linewidth}{0.4pt}\vspace{0.2cm}}
+  \begin{center}\fittedtitle{#1}\par\mwssubtitle{#2}{#3}\end{center}}
+\newcommand{\aktitleblock}[3]{\wstitleblock{#1}{#2}{#3}}
+\newcommand{\sstitleblock}[1]{\wstitleblock{#1}{}{}}
 
-% \aktitleblock{Topic}{Course}{Date} — "Answer Key" is a subtitle BENEATH the
-% topic, never appended to it: a long topic would wrap mid-phrase. Date optional.
-\newcommand{\aktitleblock}[3]{%
-  \begin{center}
-    \fittedtitle{#1}\\[0.15cm]
-    {\Large\bfseries Answer Key}\\[0.25cm]
-    \mwssubtitle{#2}{#3}
-  \end{center}}
-
-% \sstitleblock{Topic}
-% Trimmed from 105pt to ~80pt: the running header already says "Skills Summary:
-% <topic>", so the title block is reinforcement, not new information, and every
-% point it spends comes straight out of the 2-page content budget.
-\newcommand{\sstitleblock}[1]{%
-  \begin{center}
-    {\LARGE\textbf{Skills Summary}}\\[0.12cm]
-    {\large\textbf{#1}}\\[0.06cm]
-    {\small\textit{Use this reference while completing your worksheet or when studying.}}
-  \end{center}
-  \vspace{0.04cm}
-  \noindent\rule{\linewidth}{1.5pt}
-  \vspace{0.16cm}}
-
-% ── Study-guide color palette and boxes ─────────────────────────────────────
 \definecolor{skillblue}{RGB}{30,100,180}
 \definecolor{skillbluebg}{RGB}{235,244,255}
 \definecolor{warnorange}{RGB}{200,90,0}
@@ -443,14 +188,9 @@
 \definecolor{tryviolet}{RGB}{110,60,160}
 \definecolor{tryvioletbg}{RGB}{243,236,250}
 
-% \boxtab{color}{LABEL} — the small title tab each study-guide box opens
-% with. A plain colorbox, not an mdframed frametitle: frametitle adds its own
-% vertical furniture (~6pt/box, ~90pt over a full guide) and the 2-page budget
-% is the design. Kept to ONE short word so it labels, never lectures.
 \newcommand{\boxtab}[2]{%
   \noindent\colorbox{#1}{\textcolor{white}{\footnotesize\bfseries\,#2\,}}\par\nopagebreak\vspace{1.5pt}}
 
-% Formula/rule box
 \newmdenv[
   backgroundcolor=skillbluebg,
   linecolor=skillblue, linewidth=1.2pt, roundcorner=3pt,
@@ -458,11 +198,8 @@
   innerleftmargin=9pt, innerrightmargin=9pt,
   skipabove=4pt, skipbelow=3pt, nobreak=true
 ]{formulaboxinner}
-\newenvironment{formulabox}{\begin{formulaboxinner}\boxtab{skillblue}{RULE}}{\end{formulaboxinner}}
+\newenvironment{formulabox}{\begin{formulaboxinner}}{\end{formulaboxinner}}
 
-% Mini example box. The mdframed environment is the INNER shell: examplebox
-% itself is a wrapper that resets the step counter, so \step numbering starts
-% at 1 in every worked example without the author touching the counter.
 \newmdenv[
   backgroundcolor=exgreenbg,
   linecolor=exgreen, linewidth=1.2pt, roundcorner=3pt,
@@ -470,44 +207,15 @@
   innerleftmargin=9pt, innerrightmargin=9pt,
   skipabove=3pt, skipbelow=3pt, nobreak=true
 ]{exampleboxinner}
-\newenvironment{examplebox}{\setcounter{exstep}{0}\begin{exampleboxinner}\boxtab{exgreen}{EXAMPLE}}{\end{exampleboxinner}}
+\newenvironment{examplebox}{\setcounter{exstep}{0}\begin{exampleboxinner}}{\end{exampleboxinner}}
 
-% \step{...} — one auto-numbered line of a worked example. The FIRST \step of
-% every examplebox is the strategy line: one sentence, in words, naming what
-% you want, what you know, and why that picks this tool/ratio/method — the
-% computation starts in step 2. tests/check_study_guide.py enforces the shape
-% (>= 2 steps per worked example, prose-first opening step); the reasoning
-% move is what transfers, not the arithmetic.
 \newcounter{exstep}
-\newcommand{\step}[1]{\par\noindent\textbf{Step \stepcounter{exstep}\theexstep.}~#1}
+\newcommand{\step}[1]{\par\noindent\textbf{\stepcounter{exstep}\theexstep.}~#1}
 
-% \why{...} — an OPTIONAL one-line self-explanation after a step: the reason
-% the move is legal, not a restatement of it ("dividing both sides keeps the
-% equality because both sides change together", not "we divide by 3"). Set
-% small and indented so it reads as an aside a student could have said.
-% Self-explanation is one of the best-supported effects in the worked-example
-% literature; a printed model of it teaches the habit the prompts train. Use
-% AT MOST one per worked example — every line costs page budget, and a "why"
-% on a routine move buries the one that matters.
-\newcommand{\why}[1]{\par\noindent\hspace*{1.2em}{\small\textit{\textcolor{exgreen}{why:} #1}}}
+\newcommand{\why}[1]{\par\noindent\hspace*{1.2em}{\small\textit{#1}}}
 
-% \fadestep{...} — a completion step inside a TRY-IT: the setup shown, the
-% finish left to the student. Backwards-fading (worked example, then a partly
-% worked problem, then the bare try) measurably beats jumping straight from
-% example to problem on multi-step skills. Use it when the section's example
-% needed 3+ computational steps; skip it on one-move skills, where the bare
-% try-it IS the right next step. The shown step's numbers are read by the
-% prose checker like any other prose, so they must come from the entry's expr.
-\newcommand{\fadestep}[1]{\par\noindent{\small\textbf{Started for you:}~#1}\par\noindent{\small\textbf{Finish it:}}~}
+\newcommand{\fadestep}[1]{\par\noindent{\small#1}}
 
-% Try-it box (violet): the student's first retrieval attempt, paired with the
-% worked example it re-parameterizes (same skeleton, new givens). Print ONLY
-% the stem plus the answer, upside down so the student attempts before
-% checking:  \rotatebox{180}{\footnotesize check: $\ans{...}$}
-% The answer must print INSIDE this box — an \ans placed outside every box
-% (footer/answer-bank style) degrades the whole document's per-example
-% binding in check_answer_key.py. (\rotatebox comes from graphicx, which
-% tikz already loads.)
 \newmdenv[
   backgroundcolor=tryvioletbg,
   linecolor=tryviolet, linewidth=2.5pt,
@@ -516,9 +224,8 @@
   innerleftmargin=9pt, innerrightmargin=9pt,
   skipabove=3pt, skipbelow=3pt, nobreak=true
 ]{tryitboxinner}
-\newenvironment{tryitbox}{\begin{tryitboxinner}\boxtab{tryviolet}{TRY IT}}{\end{tryitboxinner}}
+\newenvironment{tryitbox}{\begin{tryitboxinner}}{\end{tryitboxinner}}
 
-% Watch-out box
 \newmdenv[
   backgroundcolor=warnbg,
   linecolor=warnorange, linewidth=1.6pt,
@@ -527,29 +234,10 @@
   innerleftmargin=9pt, innerrightmargin=9pt,
   skipabove=3pt, skipbelow=3pt, nobreak=true
 ]{watchoutboxinner}
-\newenvironment{watchoutbox}{\begin{watchoutboxinner}\boxtab{warnorange}{WATCH OUT}}{\end{watchoutboxinner}}
+\newenvironment{watchoutbox}{\begin{watchoutboxinner}}{\end{watchoutboxinner}}
 
-% \ans{...} — the printed final answer of a worked example. check_answer_key.py
-% binds study guides through this macro (and \boxed); a result set in bare
-% \boldsymbol is invisible to the gate, so every worked example ends in \ans.
-%
-% \ensuremath, not a bare \boldsymbol, because \boldsymbol is math-only and this
-% definition is what a STUDY GUIDE gets: \akheader replaces \ans with a
-% text-safe compact box, \ssheader does not, so in an ss_ document \ans has
-% always been the raw \boldsymbol. Every shipped exemplar writes it inside
-% $...$, so that held right up until someone followed SKILL.md's prose ("print
-% each result with \ans{...}") instead of copying a template — and got
-% "! Missing $ inserted", a fatal error naming the symptom two lines away from
-% the cause, on the last gate of the chain. \ensuremath is a no-op in math mode,
-% so every existing study guide renders byte-identically; it only adds the
-% missing text-mode path. Do not "simplify" it back.
 \newcommand{\ans}[1]{\ensuremath{\boldsymbol{#1}}}
 
-% Skill section heading
-% Tightened from 0.4/0.1/0.2cm (35.3pt) to 24pt. On a 2-page reference card the
-% per-skill furniture is charged 2-5 times, so heading padding is one of the
-% largest controllable costs. \needspace keeps a heading from stranding itself
-% at the foot of a page with its formula box overleaf.
 \newcommand{\skillheading}[1]{%
   \needspace{4\baselineskip}%  keeps a heading with its formula box; 7 over-reserved
   
@@ -560,27 +248,7 @@
   \vspace{0.14cm}
 }
 
-% ═══ Worksheet graph & chart house styles ═══════════════════════════════════
-% One set of styles every figure on every sheet inherits, so a document's
-% graphs match each other and survive a photocopier. The rules they encode,
-% each measured against rendered corpus pages before shipping:
-%   * black ink; semantics carried by dash pattern, fill pattern, line weight
-%     and LABELS — never by hue (a red-vs-blue distinction is two identical
-%     dots after one photocopy, and a shipped grade-3 comparison sheet was
-%     unanswerable in grayscale for exactly that reason)
-%   * line-weight hierarchy: minor grid 0.25pt < major grid 0.4pt
-%     < axis 0.8pt < curve/data 1.1pt — the data must be the darkest thing
-%   * fixed PHYSICAL units (x=7mm), never width/height stretching: unit
-%     squares stay pencil-sized and slopes render true (a corpus piecewise
-%     graph drew slope 1 at ~30 degrees from independent width/height)
-%   * Stealth arrowheads; tick labels white-backed so a curve can never
-%     strike a number ("2pi", "-1" and "6" were all struck in corpus renders)
 \pgfplotsset{
-  % Draw order for graphs: grid at the bottom, then axis lines, then the
-  % curves, then white-backed tick labels, then descriptions. This custom
-  % layer set — NOT `axis on top` — is load-bearing: with `axis on top` a
-  % dashed asymptote lying on an integer gridline (x = 2) is painted over by
-  % the grid and disappears. Verified by rendering both.
   layers/wsgraph/.define layer set=
     {axis background, axis grid, axis ticks, axis lines, main,
      axis tick labels, axis descriptions, axis foreground}
@@ -612,22 +280,13 @@
       \node[below left, font=\scriptsize, inner sep=2pt, fill=white]
         at (axis cs:0,0) {$O$};\end{pgfonlayer}},
     enlargelimits=false, clip=false},
-  % Student plotting grid: 7mm unit squares, a gridline and label at EVERY
-  % integer. The grid this replaces had lines only every 2 units — no line
-  % at any odd integer, on the figure whose whole job is plotting (3,-1).
   wsgrid/.style={wsaxisbase, x=7mm, y=7mm, xtick distance=1, ytick distance=1},
-  % Wide range (to +-10): 5.5mm units, labels every 2, a line still every 1.
   wsgridwide/.style={wsaxisbase, x=5.5mm, y=5.5mm,
     xtick distance=2, ytick distance=2, minor tick num=1,
     tick label style={font=\scriptsize, fill=white, inner sep=1pt}},
-  % Tall-range sketching (cubics): y compressed 2:1, still gridded.
   wsfuntall/.style={wsaxisbase, x=7mm, y=3.5mm,
     xtick distance=1, ytick distance=4, minor y tick num=1},
-  % Trig: give width/height and pi-multiple xtick/xticklabels per figure.
   wstrig/.style={wsaxisbase, ytick distance=1, minor y tick num=1},
-  % Quadrant-I context grid (rates, proportions): axes start AT the origin,
-  % arrows outward only, unit words go at the arrow tips, never inside the
-  % plot area.
   wsgridq1/.style={wsaxisbase, xmin=0, ymin=0,
     axis line style={line width=0.8pt,
       -{Stealth[length=2.4mm, width=2.2mm]}, shorten >=-3.5mm},
@@ -635,14 +294,6 @@
       \node[below left, font=\scriptsize, inner sep=2pt]
         at (axis cs:0,0) {$0$};\end{pgfonlayer}},
     x=7mm, y=7mm, xtick distance=1, ytick distance=1},
-  % ── data displays ──
-  % wsbar: single-series bar chart a student READS VALUES OFF. No printed
-  % value labels: horizontal gridlines at a countable step do that work.
-  % Call-site rules: pick the ytick step from {1,2,5,10} so every bar top
-  % lands ON a gridline; set ymax one step above the tallest bar.
-  % NOTE the trailing comma inside cycle list={{...},} — a single-entry cycle
-  % list without it is split into per-token entries by pgfkeys brace
-  % stripping, and the style silently falls back to the blue default.
   wsbar/.style={
     ybar, axis lines=left, ymin=0,
     bar width=22pt,
@@ -655,16 +306,10 @@
     label style={font=\small},
     cycle list={{fill=gray!30, draw=black, line width=0.6pt},},
     height=5.6cm, width=10.5cm},
-  % wsbar labeled: printed values ON the bars — ONLY for charts feeding
-  % computation (means, fraction-of-total). Never for a read_data sheet whose
-  % query is value/max_key/min_key/difference: the label answers the question
-  % for the student, which is the defect a judge found shipped on curr-200.
   wsbar labeled/.style={
     wsbar,
     nodes near coords,
     every node near coord/.append style={font=\small, color=black}},
-  % wsline: line chart over ordered categories/time; same read-off-the-grid
-  % contract as wsbar.
   wsline/.style={
     axis lines=left, ymin=0,
     enlarge x limits={abs=0.45cm},
@@ -675,11 +320,6 @@
     label style={font=\small},
     cycle list={{black, thick, mark=*, mark size=2.2pt},},
     height=5.6cm, width=10.5cm},
-  % wshist: a TRUE histogram — touching bars, ticks and labels at BIN EDGES
-  % (feed n+1 coordinates: each bin's left edge plus the closing right edge;
-  % the last y is ignored). A gapped ybar chart with interval labels is a
-  % bar chart of intervals, not a histogram — shape-of-distribution language
-  % (skew, tail) depends on the continuity the gaps break.
   wshist/.style={
     ybar interval, axis lines=left, ymin=0,
     xtick=data,
@@ -692,11 +332,6 @@
     label style={font=\small},
     cycle list={{fill=gray!25, draw=black, line width=0.6pt},},
     height=5.6cm, width=11cm},
-  % wsboxplot: horizontal box plot over a numeric axis. No y-axis (a box plot
-  % has no y meaning). Feed boxplot prepared the SAME five-number summary the
-  % stats entries verify — never raw data: pgfplots quartiles by an
-  % interpolating convention and verify.py uses school median-of-halves, and
-  % on [4,6,7,9,11,12,18] they disagree (median 9 vs 8).
   wsboxplot/.style={
     axis x line=bottom,
     hide y axis,
@@ -711,10 +346,6 @@
     boxplot/draw direction=x,
     boxplot/box extend=0.55,
     boxplot/whisker extend=0.35},
-  % wsboxplot pair: two summaries on ONE shared axis for compare items —
-  % one axis cannot mis-scale, which the two-panel groupplot template did.
-  % Give each \addplot boxplot prepared={draw position=1 / 2, ...} and name
-  % the rows with yticklabels.
   wsboxplot pair/.style={
     wsboxplot,
     hide y axis=false,
@@ -737,12 +368,6 @@
   wslabel/.style={font=\small, fill=none, inner sep=2.5pt},
 }
 
-% ── Dot plot / line plot (K-8) ──────────────────────────────────────────────
-% \wsdotplot[column sep]{v1/c1, v2/c2, ...}{caption} — one column per value,
-% count marks stacked above it. A value with count 0 keeps its tick: an empty
-% stack IS data on 5.MD.B.2 sheets. Marks are \wsplotmark (X, the K-5 line
-% plot convention); \renewcommand{\wsplotmark}{\wsdotmark} for grade 6+ dot
-% plots. Counts come from the same list-form data the read_data check uses.
 \newcommand{\wsplotmark}{\raisebox{-1pt}{\large$\times$}}
 \newcommand{\wsdotmark}{\tikz\fill[black] (0,0) circle (2.6pt);}
 \newcommand{\wsdotplot}[3][1.35cm]{%
@@ -761,11 +386,6 @@
   \end{tikzpicture}%
   \end{center}}
 
-% ── Pictogram row (K-3) ─────────────────────────────────────────────────────
-% \wspictorow{count}{Name}{half} inside a tikzpicture — a row of countable
-% boxed symbols; the half symbol carries scaled picture graphs (3.MD.B.3:
-% "each symbol = 4, half = 2"). 0.34cm symbols survive photocopying where the
-% corpus's 0.22cm smudges did not.
 \newcommand{\wspictosym}[2]{%
   \ifnum#2=1\relax
     \draw[line width=0.7pt, fill=gray!25] ({#1},0) rectangle ({#1+0.34},0.42);
@@ -781,12 +401,8 @@
   \fi
   \ifnum#3=1\relax \wspictosym{0.52*#1}{0} \fi}
 
-% ── Stem-and-leaf ───────────────────────────────────────────────────────────
-% Leaves are single digits separated by \; (CM digits are uniform width, so
-% columns align). The key line is REQUIRED — a stem plot without one is
-% unreadable across place values.
 \newenvironment{wsstemleaf}{%
   \begin{center}\begin{tabular}{r@{\ \ \vrule width 0.7pt\ \ }l}
-  \multicolumn{1}{r}{\textbf{Stem}\ \ } & \textbf{Leaf} \\[2pt]}%
+  \multicolumn{1}{r}{\mwsstemlabel\ \ } & \mwsleaflabel \\[2pt]}%
   {\end{tabular}\end{center}}
-\newcommand{\wsstemkey}[1]{\noalign{\vspace{5pt}}\multicolumn{2}{l}{\small \textbf{Key:} #1}}
+\newcommand{\wsstemkey}[1]{\noalign{\vspace{5pt}}\multicolumn{2}{l}{\small #1}}
