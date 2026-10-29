@@ -1,0 +1,5 @@
+KaTeX 0.19.1
+Source: https://github.com/KaTeX/KaTeX
+Distribution: https://registry.npmjs.org/katex/-/katex-0.19.1.tgz
+Archive integrity: sha512-jG8uKntjSEcm2EpQOh0XturpPuuC9r3Sq5HLHdsFdWZT27E672SF19QEi+of0/YeOy15lDgRhKvr5614uRrEfA==
+License: MIT (see LICENSE). Only minified browser scripts, CSS and WOFF2 fonts are vendored.

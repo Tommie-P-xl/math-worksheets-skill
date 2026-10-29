@@ -1,6 +1,6 @@
 ---
 name: math-worksheets
-description: Create math worksheets, checked answer keys and similar practice questions from text or photos. Use an optional global question bank and bounded stage-subject authoring guides for exam-style authoring; archive questions or guide changes only after individual user review and approval.
+description: Create math worksheets, checked answer keys and similar practice questions from text or photos. Browse a local question bank and use selected short-number references with bounded stage-subject authoring guides; archive questions or guide changes only after individual user review and approval.
 metadata:
   author: trond.ai; fork maintained by Tommie-P-xl
 ---
@@ -10,6 +10,59 @@ metadata:
 Resolve `SKILL_DIR` to this file's directory. Use the agent's existing model,
 file access, vision capabilities and shell; no agent-specific runtime is required.
 Read release identity from `VERSION`; do not duplicate it in filenames or other documents.
+
+## Open the question browser
+
+When the user asks to browse or choose reference questions, read
+[bank-browser.md](references/bank-browser.md). Installing this release enables
+the command; no configuration switch, running server or frontend setup is needed.
+Basic browsing needs the existing Python (3.11+) and a desktop browser. Export
+automatically compiles saved TikZ/pgfplots when XeLaTeX (or pdfLaTeX) with the
+required packages and Poppler's `pdftoppm` are available. Chinese/Unicode figure
+labels need XeLaTeX and CJK fonts. The resulting images are embedded in the HTML;
+opening an already generated page needs no TeX tools or network.
+
+Resolve `SKILL_DIR` to the actual installation containing this file. Choose a
+persistent `WORK` directory outside both the installation and bank storage;
+use `~/MathWorksheetsBrowse` if the user has no preferred work directory.
+Substitute real absolute paths and run with the existing Python (`python3` on
+systems using that name):
+
+```text
+python "SKILL_DIR/scripts/question_bank.py" browse --out "WORK/bank.html" --open
+```
+
+Return the HTML file link. `--open` attempts to launch the default browser; if
+that fails, the generated file can still be opened manually. Re-run the same
+command after bank changes to refresh the snapshot. An empty bank shows an
+empty page without initializing storage. A valid schema-2 bank needs no migration;
+never run `init` or `migrate --apply` merely to enable browsing. Follow the legacy
+migration instructions only when the existing database actually requires them.
+Check `diagram_warnings` in the command result: report missing tools or failed
+figures, and help resolve them rather than treating a text-only fallback as a
+complete visual preview. `--no-diagrams` deliberately skips TeX compilation.
+
+Tell the user to filter questions, select references and click
+**复制参考提示词** (copy reference prompt), then paste it into chat with their
+authoring requirements. The default **摘要卡片** view uses three compact columns
+on desktop and shows titles, keywords, summaries and demand metadata, with no
+question/answer images or answer expander. **详细展示** switches to one complete
+question per row with compact worksheet-scale figures; answers and worked solutions expand
+there and use the same formula renderer, including their auxiliary diagrams.
+Images and zoom controls exist only in detailed mode. The page does not display
+a separate diagram-givens section. Switching modes preserves reference selection.
+In detailed view, **复制题干 Markdown** and **复制答案 Markdown** copy each part
+with dollar-delimited TeX and fenced TikZ/SVG source. Each part also offers an
+`.md` download and PDF/PNG export with a range selector (stem, answers, or both).
+PDF opens a preview and uses **打印 / 保存 PDF** → the browser's Save as PDF;
+PNG downloads directly. These are local exports of the saved record, not new
+verification or archival. See the browser reference for export details.
+For short numbers such as `Q1、Q3`, resolve those exact
+records with `select Q1 Q3` in the indicated bank home. Inspect the complete
+needed fields, check copied titles/revisions against current records and flag
+differences. Count selected references and guides toward `reference_limit`;
+do not substitute a broad search for explicit selections. Selecting references
+is read-only and does not approve archiving generated items.
 
 ## Global references and consent
 
@@ -45,6 +98,17 @@ for every question, including each subpart and case. Transcribe all diagram give
 as text and preserve drawings/function plots and auxiliary constructions as inline
 TikZ, pgfplots or SVG code; no image bytes, image embeds, or external image paths.
 Provenance retains names/locators/hashes or URLs, not original attachments.
+Write answers in standard mathematical solution format: start each subpart and
+case on its own paragraph; separate the reason, key equations and conclusion.
+Use display math or `aligned` for substantial derivations, fully braced fractions,
+and an explicit final result with its restrictions. Compact layout does not mean
+packing multiple subparts into one paragraph. Apply this to the bank, HTML,
+Markdown and printable keys; see [solutions.md](references/solutions.md).
+For one question with multiple methods, retain the primary complete solution in
+`solution` and store additional named methods in optional `alternative_solutions`
+entries `{title, solution}`. Each method must stand on its own, include its own
+needed auxiliary diagrams, and be checked independently. Do not create duplicate
+question records or silently invent extra methods for existing questions.
 After every approved insert/revision, inspect `guide-status` and the new solution:
 propose an approved guide update for new transferable rules, or record a concrete
 `guide-review` note if existing guidance suffices. Do not mark unseen questions

@@ -1,20 +1,29 @@
 # Current release
 
-- Upgrade the global bank to schema 2: complete text/code solutions and semantic
-  diagrams, provenance metadata without uploaded attachment storage. Add an
-  explicit, validated legacy-schema migration preserving question ids and revisions.
-- Centralize live settings in global config.json; default to one previous-state
-  automatic snapshot, with configurable retention and retrieval caps.
-- Track guide review coverage per question revision and bind approved guide
-  updates to the pending references they reviewed.
-- Use compact 12 mm PDF margins and language-neutral shared components; disable
-  name/date fields, automatic quick answers and report appendices by default.
-- Document Windows/MSYS2/Git Bash, macOS and Linux use; add cross-platform core CI,
-  explicit UTF-8 file IO, migration/restore and live-configuration regression tests.
+相对 v4.0.0 的累计更新：
 
-- Read release identity exclusively from root VERSION. Keep package and source
-  filenames independent of release identity; publish a fixed runtime-only archive
-  using an explicit file allowlist, excluding tests and maintainer resources.
-- Generate concise per-parameter descriptions and defaults in config.json using
-  a standard-JSON _comments object. Preserve runtime values and backup/restore
-  compatibility, and document every setting in both READMEs.
+本次将题库浏览、渲染修复、导出及答案格式优化合并发布；版本号以根目录
+`VERSION` 和对应 Git 标签为准，不将中间试用构建列为独立正式版本。
+
+- **离线题库浏览**：ZIP 内附跨 Windows、macOS、Linux 的轻量浏览工具；
+  Python 生成单个 HTML，数据、脚本、公式字体和图片全部内嵌，无服务、CDN
+  或前端安装步骤。README 和 Skill 明确启动、刷新及缺失依赖的处理方法。
+- **固定短题号**：使用 Q1、Q2 等题号定位原题，筛选、排序和新增后不重排；
+  搜索筛选、选题与复制参考提示词支持“先浏览，再告诉 AI 参考哪些题出同类题”。
+- **两种展示模式**：三列摘要卡片显示标题、关键词和难度；详细模式一题一行，
+  展示完整题干及可展开答案。图片与放大仅在详细模式出现，不单列“图形条件”。
+- **统一数学排版与题图**：题干、答案和解答统一渲染公式、列表及常见 LaTeX
+  文本结构；支持 SVG、TikZ、pgfplots 和解答辅助图。修正小图标签遮挡，
+  限制默认图片大小并保留放大；去除公式滚动条，长公式适配可用宽度。
+- **标准解答格式**：各小问和分类分段，关键推导独立成行，明确依据、计算或
+  证明及结论；旧记录的紧凑文本可保守分段，数学源码及绘图代码保持原意。
+- **一题多解**：保留原 `solution`，可通过 `alternative_solutions` 保存其他
+  具名完整解法及各自图形；HTML 分区展示，Markdown、PDF、PNG 答案导出均
+  保留全部解法。旧单解法题目、编号与备份仍兼容，无需数据库迁移。
+- **按范围导出**：题干和答案可分别复制或下载 Markdown，公式使用美元符号，
+  图形保留 TikZ/SVG 源码；可将仅题干、仅答案或两者导出为 PDF/PNG。
+  PDF 使用浏览器打印预览，PNG 离线直接下载。
+- **示例与验证**：中英文 README、离线合成示例、两种视图截图及一题多解示例；
+  补充三系统题库/打包检查，以及离线浏览器的公式、图片、复制与导出回归检查。
+
+安装包不包含个人题库、个人题目的排版修订、备份或 Git 历史。

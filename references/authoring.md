@@ -9,6 +9,12 @@ confirmed taught scope rather than forcing an unrelated CCSS/AP grade label.
 
 ## Layout policy
 
+Write answer keys using the [standard mathematical answer layout](solutions.md):
+one paragraph per subpart/case, reasons followed by displayed key equations and
+an explicit conclusion. A compact worksheet must not produce a wall of answer
+text. When multiple methods are requested, check and label each complete method;
+store extra bank methods as `alternative_solutions`, keeping one question record.
+
 Use compact question layout by default: no reserved working space between stems.
 Keep original inline blanks and readable diagrams. Only when the user explicitly
 requests writing room, add `\worksheetlayout{spacious}` and choose the requested

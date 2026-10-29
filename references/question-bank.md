@@ -75,6 +75,11 @@ the configured cap; it does not discard the end.
 
 ## Storage and commands
 
+For visual browsing and selecting references by short numbers (`Q1`, `Q3`),
+see [bank-browser.md](bank-browser.md). `show` and `select` accept either a short
+number or the existing full ID. Short numbers are local to one bank home and
+remain fixed across revisions, filtering, new inserts and backup/restore.
+
 Resolve home identically in every project: explicit `--home` for tests/migration,
 then `MWS_DATA_HOME`, then `%LOCALAPPDATA%/MathWorksheets` on Windows,
 `~/Library/Application Support/MathWorksheets` on macOS or
@@ -91,6 +96,8 @@ python SKILL_DIR/scripts/question_bank.py guide-preview --stage 初中 --subject
 python SKILL_DIR/scripts/question_bank.py guide-commit --stage 初中 --subject 数学 --file WORK/proposed.md --sources WORK/research.json --approved PREVIEW_SHA256 --approval-note "user's explicit reply or message reference"
 python SKILL_DIR/scripts/question_bank.py guide-show --stage 初中 --subject 数学
 python SKILL_DIR/scripts/question_bank.py show QUESTION_ID --fields stem,answer,solution,diagram,verification
+python SKILL_DIR/scripts/question_bank.py browse --out WORK/bank.html --open
+python SKILL_DIR/scripts/question_bank.py select Q1 Q3 --fields title,stem,answer,solution,alternative_solutions,tags,demand,diagram,verification
 python SKILL_DIR/scripts/question_bank.py config
 python SKILL_DIR/scripts/question_bank.py guide-status --stage 初中 --subject 数学
 python SKILL_DIR/scripts/question_bank.py guide-review --stage 初中 --subject 数学 --id QUESTION_ID --note "Reviewed this solution; existing topic section already covers its method."
@@ -125,6 +132,16 @@ block authoring. Prefer relevant quality to filling the reference limit.
 Run `schema` for a compact example. Required fields:
 
 - `title`, `summary`, `stem`, `answer`, `solution` as UTF-8 text; formulas use LaTeX.
+- Optional `alternative_solutions`: a list of `{title, solution}` objects for
+  additional complete methods under the same question. `solution` remains the
+  primary method, so old records remain valid. Each method has a nonempty title
+  (at most 120 characters) and complete text/code (at most 40000 characters),
+  subject to the same no-image-dependencies rule. Follow the paragraph/display
+  layout in [solutions.md](solutions.md); check each method independently.
+  Use explicit-ID revision proposals to add methods to an existing record.
+  `show` includes all methods by default; `select` can request
+  `alternative_solutions`. Bounded `context` lists extra-method titles; retrieve
+  full text only for selected questions. Backups and JSONL exports retain methods.
 - `tags`: categories `stages`, `subjects`, `grades`, `exams`, `topics`, `types`,
   `methods`; each category has 0–5 distinct concise strings (each at most 32 chars).
   Stage and subject are required; stage values are only 小学/初中/高中. Multiple

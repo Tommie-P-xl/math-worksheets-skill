@@ -67,7 +67,7 @@ CONFIG_COMMENTS = {
     "problem_gap_mm": "紧凑排版时题目之间的间距，单位毫米，可使用小数。",
     "answer_problem_gap_mm": "答案册相邻题目之间的间距，单位毫米，使用正整数。",
 }
-ITEM_FIELDS = {"id", "title", "summary", "stem", "answer", "solution", "tags", "demand",
+ITEM_FIELDS = {"id", "title", "summary", "stem", "answer", "solution", "alternative_solutions", "tags", "demand",
                "origin", "verification", "diagram", "sources", "family", "uncertainties", "duplicate_decision"}
 DDL = """
 CREATE TABLE IF NOT EXISTS problems (
@@ -178,6 +178,15 @@ def validate_item(data):
     for name, limit in (("title", 120), ("summary", 240), ("stem", 20000), ("answer", 20000), ("solution", 40000)):
         text_field(item.get(name), name, limit)
     text_only({k: item[k] for k in ("stem", "answer", "solution")})
+    alternatives = item.get("alternative_solutions", [])
+    if not isinstance(alternatives, list):
+        raise BankError("alternative_solutions: expected a list of named solutions")
+    for alternative in alternatives:
+        if not isinstance(alternative, dict) or set(alternative) != {"title", "solution"}:
+            raise BankError("alternative_solutions: each entry needs title and solution")
+        text_field(alternative["title"], "alternative solution title", 120)
+        text_field(alternative["solution"], "alternative solution", 40000)
+    text_only(alternatives)
     if "id" in item:
         text_field(item["id"], "id", 64)
     item["tags"] = validate_tags(item.get("tags"))
@@ -428,12 +437,40 @@ class Bank:
         with self.connection() as con:
             return [] if con is None else [dict(r) for r in con.execute("SELECT * FROM problems ORDER BY updated DESC,id")]
 
+    def short_ids(self):
+        """Use immutable first archival event numbers; browsing needs no schema/write."""
+        with self.connection() as con:
+            return {} if con is None else {
+                row["target"]: "Q" + str(row["number"])
+                for row in con.execute("SELECT target,MIN(id) AS number FROM events WHERE kind='question' GROUP BY target")
+            }
+
     def get(self, identity):
+        numbers = self.short_ids()
+        if re.fullmatch(r"[Qq][1-9][0-9]*", identity):
+            identity = next((key for key, value in numbers.items() if value == identity.upper()), identity)
         with self.connection() as con:
             row = None if con is None else con.execute("SELECT * FROM problems WHERE id=?", (identity,)).fetchone()
         if row is None:
             raise BankError(f"unknown question: {identity}")
-        return {"revision": row["revision"], "item": json.loads(row["payload"])}
+        return {"short_id": numbers.get(identity), "revision": row["revision"], "item": json.loads(row["payload"])}
+
+    def select(self, identities, fields):
+        """Resolve only user-selected references, keeping the combined reference cap."""
+        if set(fields) - ITEM_FIELDS:
+            raise BankError("unknown show field")
+        records, seen = [], set()
+        for identity in identities:
+            record = self.get(identity)
+            item = record["item"]
+            if item["id"] in seen:
+                continue
+            seen.add(item["id"])
+            if len(seen) > self.config()["reference_limit"]:
+                raise BankError("selected questions exceed reference_limit (questions and guides combined)")
+            records.append({**{key: item.get(key) for key in fields}, "id": item["id"],
+                            "short_id": record["short_id"], "revision": record["revision"]})
+        return {"home": str(self.home), "reference_count": len(records), "references": records}
 
     def sources(self, records, base):
         clean, attachments = [], {}
@@ -608,7 +645,7 @@ class Bank:
             con.execute("INSERT INTO events(time,kind,target,approval,receipt,before_json,after_json) VALUES(?,?,?,?,?,?,?)",
                         (now(), "question", identity, note, current, encoded(before) if before else None, encoded(item)))
         reviews = [self.guide_status(stage, subject) for stage in item["tags"]["stages"] for subject in item["tags"]["subjects"]]
-        return {"id": identity, "revision": revision, "mode": fresh["mode"], "home": str(self.home),
+        return {"id": identity, "short_id": self.short_ids().get(identity), "revision": revision, "mode": fresh["mode"], "home": str(self.home),
                 "guide_review_required": self.config()["guide_review_on_commit"], "guide_reviews": reviews}
 
     def read_guide(self, stage, subject):
@@ -784,11 +821,13 @@ class Bank:
             references.append({"kind": "guide", "key": guide["key"], "path": guide["path"], "text": excerpt,
                                "truncated": cut, "external_edit": guide["external_edit"],
                                "topic_match": not terms or any(t.lower() in excerpt.lower() for t in terms)})
+        numbers = self.short_ids()
         for _, item in matches[:limit - len(references)]:
-            references.append({"kind": "question", **{k: item[k] for k in ("id", "title", "summary", "tags", "demand", "family")},
+            references.append({"kind": "question", "short_id": numbers.get(item["id"]), **{k: item[k] for k in ("id", "title", "summary", "tags", "demand", "family")},
                                "stem": item["stem"][:config["stem_excerpt_chars"]], "answer": item["answer"][:config["answer_excerpt_chars"]], "solution": item["solution"][:config["solution_excerpt_chars"]],
                                "givens": encoded(item["diagram"].get("givens", []))[:config["givens_excerpt_chars"]],
                                "verification": item["verification"]["status"],
+                               "alternative_solution_titles": [solution["title"] for solution in item.get("alternative_solutions", [])],
                                "truncated": any(len(item[k]) > config[k + "_excerpt_chars"] for k in ("stem", "answer", "solution")) or len(encoded(item["diagram"].get("givens", []))) > config["givens_excerpt_chars"]})
         result = {"references": references, "reference_count": len(references), "limit": limit,
                   "max_chars": max_chars, "needs_research": not any(r["kind"] == "question" or r.get("topic_match") for r in references),
@@ -1086,7 +1125,14 @@ def main(argv=None):
     context.add_argument("--max-chars", type=int)
     show = commands.add_parser("show")
     show.add_argument("id")
-    show.add_argument("--fields", default="title,summary,stem,answer,solution,tags,demand,diagram,verification,sources,origin,family,uncertainties")
+    show.add_argument("--fields", default="title,summary,stem,answer,solution,alternative_solutions,tags,demand,diagram,verification,sources,origin,family,uncertainties")
+    select = commands.add_parser("select", help="read user-selected short numbers or full IDs")
+    select.add_argument("ids", nargs="+")
+    select.add_argument("--fields", default=show.get_default("fields"))
+    browse = commands.add_parser("browse", help="export a self-contained offline HTML browser; never changes the bank")
+    browse.add_argument("--out", required=True, help="HTML snapshot path outside the skill and bank storage")
+    browse.add_argument("--open", action="store_true", help="also try opening the snapshot in the default browser")
+    browse.add_argument("--no-diagrams", action="store_true", help="skip compiling saved TikZ/pgfplots previews")
     commands.add_parser("backup").add_argument("--out", required=True)
     commands.add_parser("restore").add_argument("--file", required=True)
     commands.add_parser("export").add_argument("--out", required=True)
@@ -1128,11 +1174,18 @@ def main(argv=None):
         elif args.command == "context":
             result = bank.context(args.stage, args.subject, args.grade, args.topic, args.query, args.limit, args.max_chars)
         elif args.command == "show":
-            record = bank.get(args.id)
-            fields = args.fields.split(",")
-            if set(fields) - ITEM_FIELDS:
-                raise BankError("unknown show field")
-            result = {"id": args.id, "revision": record["revision"], **{key: record["item"].get(key) for key in fields}}
+            result = bank.select([args.id], args.fields.split(","))["references"][0]
+        elif args.command == "select":
+            result = bank.select(args.ids, args.fields.split(","))
+        elif args.command == "browse":
+            from bank_browser import export_browser
+            result = export_browser(bank, args.out, render_diagrams=not args.no_diagrams)
+            if args.open:
+                import webbrowser
+                try:
+                    result["browser_opened"] = webbrowser.open(Path(result["html"]).as_uri())
+                except webbrowser.Error:
+                    result["browser_opened"] = False
         elif args.command == "guide-show":
             result = bank.read_guide(args.stage, args.subject)
         elif args.command == "guide-preview":
@@ -1150,7 +1203,7 @@ def main(argv=None):
             result = bank.export(args.out)
         print(encoded(result))
         return 1 if args.command == "doctor" and not result["ok"] else 0
-    except (BankError, OSError, sqlite3.Error, zipfile.BadZipFile, json.JSONDecodeError, KeyError, TypeError) as exc:
+    except (ValueError, OSError, sqlite3.Error, zipfile.BadZipFile, KeyError, TypeError) as exc:
         print(encoded({"error": str(exc)}), file=sys.stderr)
         return 1
 

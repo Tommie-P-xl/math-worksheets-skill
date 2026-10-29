@@ -97,6 +97,113 @@
 [下载完整答案册 PDF](docs/examples/photo-folding/ak_photo_folding.pdf) ·
 [查看题干核对记录、使用提示与复现方法](docs/examples/photo-folding/README.md)
 
+### 功能三：先浏览题库，再按题号出同类型题
+
+| 摘要卡片：三列快速选题 | 详细展示：一题一行，含答案图 |
+|:---:|:---:|
+| [<img src="docs/examples/bank-browser/browser.png" width="480" alt="三列摘要卡片，不显示题图">](docs/examples/bank-browser/browser.png) | [<img src="docs/examples/bank-browser/browser-detail.png" width="480" alt="详细模式展示完整题干、公式、题图与答案辅助图">](docs/examples/bank-browser/browser-detail.png) |
+
+| 1 · 打开题库 | 2 · 找到理想参考题 | 3 · 回到聊天出题 |
+|---|---|---|
+| 告诉 AI：“打开我的全局题库，让我先选参考题。” | 按年级、知识点、题型或难度筛选，在摘要卡片中选题；切换“详细展示”查看完整题干、公式、题图和解答。 | 点击“复制参考提示词”，粘贴到聊天并补充数量、已学知识和交付物。 |
+
+上图用 **4 道合成演示题**展示实际工具：左侧摘要卡片选中相似三角形 `Q1` 与
+勾股定理 `Q3`，右侧详细模式展开 `Q3` 的题目与答案图。题号简短且固定，
+切换视图、筛选、分页、修订或新增题目后不会重排。
+例如回到聊天中说：
+
+```text
+使用 math-worksheets，参考题库 Q1、Q3，各出 2 道同类型新题。
+学生为九年级，已经学过相似三角形和勾股定理。
+保持考查结构和推理要求，计算量稍降。
+输出中文 A4 题目和答案，暂不收录新题。
+```
+
+AI 会按题号读取指定原题、完整解答和难度信息，再设计和独立验算新题。
+“复制参考提示词”还会带上**题库位置、题名和修订版本**，便于核对浏览时的题目。
+演示题号只属于演示题库；实际使用时选择你自己题库里的题号。
+
+浏览工具、KaTeX 公式渲染器和字体均在安装 ZIP 内。基础浏览只需现有 Python 与系统浏览器，
+无须启动服务或安装前端依赖。导出时会自动用已有 LaTeX 和 Poppler 渲染 TikZ/pgfplots 题图，
+并将图片嵌入 HTML；打开生成的页面不需要 LaTeX，也不需要联网。
+
+<a id="bank-browser-start"></a>
+
+#### 如何启用并打开题库浏览
+
+**先安装包含浏览工具的最新 ZIP**；已安装旧版时，用新 ZIP 更新同一个 Skill。
+然后在 Agent 中重新加载技能或重启。没有额外的启用开关，个人题库也不在 ZIP 中，
+更新 Skill 不会替换题目。已有 schema 2 题库无需迁移；不要为启用浏览运行 `init`
+或 `migrate --apply`。旧 schema 1 按[升级已有题库](#升级已有题库)处理。
+
+最便捷的方法是在聊天中直接说：
+
+```text
+使用 math-worksheets，打开我的全局题库让我浏览，并给我浏览页的文件链接。
+```
+
+也可以手动启动。下面以 Codex 的手动安装位置为例，**先将 `skillDir` / `SKILL_DIR`
+改成实际包含 `SKILL.md` 的目录**；CC Switch 安装位置以其界面为准，已有安装也可能
+位于 `~/.codex/skills/math-worksheets`。
+
+**Windows PowerShell：**
+
+```powershell
+$skillDir = "$env:USERPROFILE\.agents\skills\math-worksheets"
+$browseFile = "$env:USERPROFILE\MathWorksheetsBrowse\bank.html"
+python "$skillDir\scripts\question_bank.py" browse --out $browseFile --open
+```
+
+**macOS / Linux 终端：**
+
+```bash
+SKILL_DIR="$HOME/.agents/skills/math-worksheets"
+python3 "$SKILL_DIR/scripts/question_bank.py" browse --out "$HOME/MathWorksheetsBrowse/bank.html" --open
+```
+
+启动命令会生成 `~/MathWorksheetsBrowse/bank.html`，并尝试用默认浏览器打开。
+若未自动打开，双击该文件即可；也可以让 AI 提供它的文件链接。输出目录由脚本创建，
+无需提前新建，也不能放在 Skill 或题库数据目录内。使用自定义题库时，在命令末尾
+追加 `--home "实际题库目录"`。空题库会显示空页面，先批准收录题目即可。
+
+页面顶部提供两种显示方式：
+
+- **摘要卡片**：桌面三列，只显示题号、标题、关键词、摘要和难度等信息，不显示题干全文、图片或答案展开入口；窄屏自动减少列数。
+- **详细展示**：每行一题，完整显示题干与小问；题图和答案图采用接近试卷的紧凑默认尺寸，点击可放大。展开“查看答案与完整解答”可阅读答案、分步推导和辅助图。图片与放大入口仅在此模式出现。
+
+详细模式中的每道题都可单独导出：
+
+- **复制题干 Markdown / 复制答案 Markdown**：题干与答案分开复制，公式、函数使用 `$…$` / `$$…$$`，题图与答案图使用带语言标记的 TikZ/SVG 代码块，适合粘贴给 AI 讨论；也可点击 **下载 题干.md / 下载 答案.md**。答案导出包含结论、完整解答及补充图。
+- **导出 PDF**：选择“仅题干”“仅答案”或“题干和答案”，打开预览后点击 **打印 / 保存 PDF**，在系统浏览器打印窗口选择“另存为 PDF”；建议关闭页眉和页脚。
+- **导出 PNG**：使用同一范围选项，直接下载包含渲染后公式和图片的高清 PNG。导出的 PDF/PNG 只包含所选内容，不含筛选栏、选题控件或来源元数据。
+
+这些操作在本地离线完成，不上传题目、不改数据库，也不要求用户安装 Node.js。
+常见行内公式不再生成滚动条；超过可用行宽的长公式会按容器宽度缩放。
+
+**答案排版与一题多解：**每个小问、分类情况单独分段，关键推导另起公式行，按“依据 → 计算或证明 → 结论”组织。紧凑版式也保留合理换行。
+同一题可以保存多个完整解法：主解法放在 `solution`，其他解法放在可选的 `alternative_solutions` 数组中，每项含 `title`（如“几何法”）与 `solution`（完整解答及绘图代码）。
+HTML 按“解法一、解法二……”分区显示；复制答案 Markdown、导出答案或题干和答案的 PDF/PNG 时，会依次保留所有解法、公式及各自辅助图。
+已有单解法题目无需迁移，也不必复制成多道题。向 AI 提出“为 Q3 增加坐标法，保留原解法”，审核后即可修订原记录。
+演示页的 Q3 同时展示勾股定理与坐标法。格式及字段示例见[答案规范](references/solutions.md)与[题库格式](references/question-bank.md)。
+
+两种模式都不再单列“图形条件”区块。题干、答案和解答共用公式渲染，支持常见
+LaTeX 文本结构、嵌套编号、`\ans` 答案宏，以及旧题未加数学分隔符的表达式。
+切换模式不会清空已选参考题。在页面中勾选题目，点击“复制参考提示词”，粘贴回聊天并补充出题要求。
+题库更新后重新运行同一命令、再刷新浏览器即可；无需重新安装 Skill。
+支持简单 SVG、TikZ 和 pgfplots 题图预览；一道题保存的多幅图会按顺序全部显示，点击可放大。
+解答中保存的 TikZ/SVG 辅助图也会按位置渲染，重复的答案图不会再次追加。过小的数值坐标题图
+会调整预览比例，并将可识别的点名移到空白位置；这些都是显示适配，不改题目坐标或数据库。
+生成 TikZ/pgfplots 预览需在 PATH 中可找到 **XeLaTeX（或 pdfLaTeX）与 `pdftoppm`**，
+并安装 standalone、TikZ、pgfplots 包；中文图形标签另需 XeLaTeX 与 ctex/Fandol 字体。
+缺少工具或编译失败时，页面会标明具体原因，命令结果的 `diagram_warnings` 也会列出题号；
+安装缺失依赖后重新生成即可。若只想快速查看文字，可追加 `--no-diagrams`。
+如果仍在查看旧版生成的 HTML，需要先用新版重新运行 `browse`，再刷新浏览器；
+仅刷新旧快照不会自动补出题图。
+
+[查看完整场景与复现方法](docs/examples/bank-browser/README.md) ·
+[下载离线演示 HTML](https://github.com/Tommie-P-xl/math-worksheets-skill/raw/refs/heads/main/docs/examples/bank-browser/browser.html) ·
+[轻量方案比较与使用说明](references/bank-browser.md)
+
 <p align="right"><a href="#readme-top">返回顶部</a></p>
 
 
@@ -112,7 +219,7 @@
 3. 将技能启用或同步到 Claude Code、Codex 等需要使用的 Agent。
 4. 按下面的说明准备运行依赖。若 Agent 尚未显示该技能，重启，或直接指定安装目录的 `SKILL.md`。
 
-ZIP 中只有一个 `math-worksheets/` 目录，包含技能入口、脚本、模板、参考资料和许可。
+ZIP 中只有一个 `math-worksheets/` 目录，包含技能入口、脚本、模板、参考资料、离线题库浏览工具及其公式字体和许可。
 README 图片、示例 PDF、测试和发布工具不进入安装包。每个发布版本附带 SHA-256 校验文件。
 操作界面可参考 [CC Switch 技能管理说明](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/zh/3-extensions/3.3-skills.md)。
 
@@ -410,6 +517,8 @@ python SKILL_DIR/scripts/question_bank.py backup --out /chosen/path/bank.zip
 ---
 
 ## 版本与构建
+
+[查看相对 v4.0.0 的累计更新日志](CHANGELOG.md)。
 
 skill 版本号只保存在根目录 [`VERSION`](VERSION)。顶部徽章直接读取此文件，
 发布标签也由它派生；徽章服务可能有短暂缓存。

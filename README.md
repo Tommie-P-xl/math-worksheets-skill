@@ -106,6 +106,138 @@ explicitly marked for manual review. See the
 
 ---
 
+### Function 3: browse the bank, then request similar questions by number
+
+| Summary cards: three-column selection | Detailed view: full question and answer figures |
+|:---:|:---:|
+| [<img src="docs/examples/bank-browser/browser.png" width="480" alt="Three-column summary cards without figures">](docs/examples/bank-browser/browser.png) | [<img src="docs/examples/bank-browser/browser-detail.png" width="480" alt="One question per row with formulas, question figure and worked-answer figure">](docs/examples/bank-browser/browser-detail.png) |
+
+| 1 · Open the bank | 2 · Choose references | 3 · Return to chat |
+|---|---|---|
+| Ask the agent: “Open my question bank so I can choose reference questions.” | Filter by grade, topic, type or difficulty; select summary cards and switch to the detailed view to inspect full questions and answers. | Click **复制参考提示词** (copy reference prompt), paste into chat and add the quantity, taught scope and deliverables. |
+
+The screenshot shows the working tool with **four synthetic demo questions**.
+The summary screenshot selects similar triangles `Q1` and Pythagoras `Q3`; the
+detailed screenshot expands Q3 and its answer figure. Short numbers stay fixed
+across view changes, filters, pages, revisions and new inserts.
+For example, the next chat message can be:
+
+```text
+Use math-worksheets. Make two new questions of the same type as each of Q1 and Q3.
+The grade-9 student has learned similar triangles and the Pythagorean theorem.
+Preserve the reasoning structure, with slightly lighter calculations.
+Deliver a Chinese A4 worksheet and answer key. Do not archive the new questions.
+```
+
+The agent resolves those exact records, reads their full solutions and demand
+information, then designs and independently checks new questions. The copied
+prompt includes the **bank home, titles and revisions** for matching the viewed
+records. Demo numbers belong only to the demo bank; use your own bank's numbers.
+
+The installable ZIP includes the viewer, KaTeX renderer, fonts and licenses.
+Basic browsing needs only existing Python and a desktop browser; there is no
+server, frontend installation or CDN request. During export, saved TikZ/pgfplots
+are automatically compiled with existing TeX/Poppler tools and embedded into the
+HTML. Opening that generated page requires neither TeX nor network access.
+
+<a id="bank-browser-start"></a>
+
+#### Enable and open the question browser
+
+**Install the latest ZIP containing the viewer first.** To upgrade, update the
+same installed skill from the new ZIP, then reload skills or restart the agent.
+There is no additional enable switch. Personal bank data is outside the ZIP and
+is not replaced by a skill update. Existing schema-2 banks need no migration;
+do not run `init` or `migrate --apply` just to enable browsing. For schema 1,
+follow [Upgrade an existing bank](#upgrade-an-existing-bank).
+
+The easiest launch method is to tell the agent:
+
+```text
+Use math-worksheets. Open my global question bank for browsing and give me the HTML file link.
+```
+
+For a manual launch, **set `skillDir` / `SKILL_DIR` to the actual directory
+containing `SKILL.md`**. These examples use Codex's manual install location;
+check CC Switch for its installed path. Existing installations may also live
+under `~/.codex/skills/math-worksheets`.
+
+**Windows PowerShell:**
+
+```powershell
+$skillDir = "$env:USERPROFILE\.agents\skills\math-worksheets"
+$browseFile = "$env:USERPROFILE\MathWorksheetsBrowse\bank.html"
+python "$skillDir\scripts\question_bank.py" browse --out $browseFile --open
+```
+
+**macOS / Linux terminal:**
+
+```bash
+SKILL_DIR="$HOME/.agents/skills/math-worksheets"
+python3 "$SKILL_DIR/scripts/question_bank.py" browse --out "$HOME/MathWorksheetsBrowse/bank.html" --open
+```
+
+The command creates `~/MathWorksheetsBrowse/bank.html` and attempts to open it
+in the default browser. If that fails, double-click the file or follow the
+agent's file link. The output directory is created automatically and must be
+outside the skill and bank data directories. For a custom bank, append
+`--home "ACTUAL_BANK_HOME"`. An empty bank shows an empty page; approve questions
+for archival before browsing them.
+
+The two buttons above the results switch between:
+
+- **摘要卡片** (summary cards): three compact desktop columns with numbers, titles, keywords, summaries and difficulty. Full stems, all images and answer expanders are omitted; narrow screens reduce the column count.
+- **详细展示** (detailed view): one complete question per row with compact worksheet-scale figures and structured subparts. Click images to enlarge, or expand **查看答案与完整解答** for rendered answers, worked solutions and auxiliary figures. Images and zoom controls appear only in this mode.
+
+Each detailed question also provides:
+
+- **复制题干 Markdown / 复制答案 Markdown**: copy the stem or answers separately, with `$…$` / `$$…$$` formulas and fenced TikZ/SVG source for figures, ready for AI discussion. The answers include the final result, worked solution and supplementary diagrams. Each part also has an `.md` download.
+- **导出 PDF**: choose stem only, answers only, or both, then open the preview and click **打印 / 保存 PDF**. Select Save as PDF in the browser's print dialog; disable browser headers and footers for a clean document.
+- **导出 PNG**: the same range selector downloads a high-resolution PNG with rendered formulas and images. PDF/PNG contain only the selected content, without filters, selection controls or source metadata.
+
+Exports run locally offline without changing the bank or requiring Node.js.
+Inline formulas no longer create scrollbar widgets; formulas wider than their
+container scale to fit the available width.
+
+**Answer layout and multiple methods:** start each subpart/case on a separate
+paragraph, display key derivations, and give the reason, calculation/proof and
+conclusion in order. Keep the primary method in `solution` and additional complete
+methods in optional `alternative_solutions` entries `{title, solution}`. HTML shows
+numbered method sections; answer Markdown and answer/both PDF/PNG exports include
+all methods with their formulas and auxiliary diagrams. Existing single-method
+records need no migration or duplication. Ask the agent to add a named method to
+the original question and review the revision before saving. Demo Q3 includes
+Pythagoras and a coordinate method. See [answer conventions](references/solutions.md)
+and [bank JSON](references/question-bank.md).
+
+Neither mode shows a separate diagram-givens section. Stems, answers and solutions
+share formula rendering, including common LaTeX text/list structures, nested
+numbering, the `\ans` macro and legacy expressions without math delimiters.
+Reference selection persists across modes. Select questions, click **复制参考提示词**, then paste the prompt into
+chat with the requested quantity and deliverables. Re-run the same command and
+refresh the browser after bank changes; no skill reinstall is needed.
+Simple SVG, TikZ and pgfplots diagrams are previewed. All saved figures for a
+question appear in order and can be clicked to enlarge. Export also renders
+auxiliary diagrams embedded in solutions, without appending
+duplicates from answer overlays. Tiny numeric-coordinate drawings receive a
+readable preview scale and clear point-label positions; saved coordinates and
+database content remain unchanged. Generating TikZ/pgfplots
+previews requires **XeLaTeX (or pdfLaTeX) and `pdftoppm`** on PATH, with the
+standalone, TikZ and pgfplots packages. Chinese/Unicode labels additionally need
+XeLaTeX and ctex/Fandol fonts. Missing tools or compilation failures produce a
+specific page notice and a `diagram_warnings` entry with the question number;
+install the missing dependencies and regenerate. Use `--no-diagrams` to
+deliberately skip TeX compilation for a quick text-only export.
+After upgrading the skill, regenerate older HTML snapshots with the new
+`browse` command before refreshing the browser; reloading an old snapshot alone
+cannot add the previously omitted images.
+
+[Scenario and reproduction steps](docs/examples/bank-browser/README.md) ·
+[Download the offline demo HTML](https://github.com/Tommie-P-xl/math-worksheets-skill/raw/refs/heads/main/docs/examples/bank-browser/browser.html) ·
+[Lightweight options and usage](references/bank-browser.md)
+
+---
+
 ## Install
 
 ### CC Switch: install the release ZIP
@@ -118,7 +250,7 @@ explicitly marked for manual review. See the
    the agent, or point it directly at the installed `SKILL.md`.
 
 The ZIP contains one `math-worksheets/` directory with the skill, scripts,
-templates, references and license. README images, example PDFs, tests and release
+templates, references, offline bank viewer, formula fonts and licenses. README images, example PDFs, tests and release
 tools stay outside the installable package. SHA-256 files are attached to releases.
 See [CC Switch's Skills guide](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/zh/3-extensions/3.3-skills.md).
 
@@ -422,6 +554,8 @@ requested language. Historical previews illustrate features rather than the curr
 ---
 
 ## Version and builds
+
+[Cumulative changes since v4.0.0](CHANGELOG.md).
 
 Release identity is maintained only in root [`VERSION`](VERSION). The badge reads
 that file directly, and publishing derives its tag from it. The badge service may

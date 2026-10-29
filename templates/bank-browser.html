@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src data:; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>题库 · Math Worksheets</title>
+<style>
+@@MWS_MATH_CSS@@
+</style>
+<style>
+:root{color-scheme:light;--ink:#182b30;--muted:#607375;--green:#1f6857;--line:#dbe2dc;--paper:#fafaf6;--wash:#edf3ed;--accent:#dcebc4}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+button,input,select,textarea{font:inherit}button,select,input{border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink)}button{padding:8px 13px;cursor:pointer}button:hover{border-color:var(--green);background:var(--wash)}button:disabled{opacity:.45;cursor:default}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #a4c795;outline-offset:2px}
+.wrap{max-width:1460px;margin:auto;padding:28px 36px}header{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:24px}.eyebrow{font-size:11px;letter-spacing:.18em;font-weight:700;color:var(--green)}h1{font-size:32px;letter-spacing:-.04em;margin:6px 0}h2{font-size:17px;margin:0}p{margin:8px 0}.muted{color:var(--muted)}.intro{font-size:14px}.steps{font-size:13px;white-space:nowrap;display:flex;align-items:center;gap:12px}.step{background:var(--wash);border-radius:50%;width:25px;height:25px;display:inline-grid;place-items:center;color:var(--green);font-weight:650}
+.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:30px}aside label{display:block;font-size:12px;color:var(--muted);margin:16px 0 6px}aside select{padding:9px;width:100%}aside{padding-right:22px;border-right:1px solid var(--line)}.note{font-size:12px;color:var(--muted);margin-top:22px;overflow-wrap:anywhere}.search{display:flex;gap:10px}.search input{padding:11px 14px;width:100%;min-width:0}.results-head{display:flex;justify-content:space-between;align-items:center;margin:17px 0;font-size:13px;gap:16px}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}.card{background:white;border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0;box-shadow:0 3px 12px #263c3005}.card.chosen{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}.card-top{display:flex;justify-content:space-between;align-items:center;gap:12px}.number{font-size:17px;font-weight:750;letter-spacing:.02em;color:var(--green)}.pick{display:flex;gap:7px;align-items:center;font-size:13px;cursor:pointer}.pick input{accent-color:var(--green);width:16px;height:16px}.card h2{margin:12px 0 9px}.badges{display:flex;flex-wrap:wrap;gap:5px}.badge{font-size:11px;padding:2px 7px;border-radius:4px;background:var(--wash);color:#435e50}.stem{margin:18px 0;white-space:pre-wrap;overflow-wrap:anywhere}.summary{font-size:12px;color:var(--muted)}.meta{font-size:12px;color:var(--muted);border-top:1px solid #edf0ea;padding-top:12px;margin-top:14px}.figure{display:block;max-width:100%;height:auto;max-height:240px;margin:12px auto}.givens{font-size:13px;white-space:pre-wrap;margin-top:9px}.diagram-note{font-size:12px;color:#88612c;background:#fbf5e9;padding:9px 12px;border-radius:5px}details{border-top:1px solid #edf0ea;margin-top:12px;padding-top:10px}summary{cursor:pointer;font-size:13px;color:var(--green)}.detail-body{font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}.detail-body h3{font-size:12px;color:var(--muted);margin:14px 0 4px}.detail-body p{margin:4px 0}.source{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;max-height:260px;overflow:auto;background:var(--paper);padding:10px}.katex-display{overflow-x:auto;overflow-y:hidden;padding:5px 0}.katex{font-size:1.1em}.katex-error{white-space:normal!important}.pagination{display:flex;justify-content:center;align-items:center;gap:18px;margin:24px 0}.empty{text-align:center;border:1px dashed var(--line);padding:60px 24px;border-radius:12px;grid-column:1/-1}.empty strong{display:block;font-size:20px;margin-bottom:12px}
+.selection{position:sticky;bottom:12px;z-index:2;border:1px solid #b6cbbd;border-radius:12px;background:#f2f7eff5;backdrop-filter:blur(10px);box-shadow:0 4px 24px #1b342b12;padding:15px 20px;margin-top:12px}.selection-top{display:flex;justify-content:space-between;gap:16px;align-items:center}.selected-list{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.selected-list button{padding:3px 9px;font-size:12px;border-color:#c1d3bf}.primary{background:var(--green);border-color:var(--green);color:#fff}.primary:hover{background:#195141;color:white}.actions{display:flex;gap:8px;flex-shrink:0}.selection textarea{width:100%;height:125px;resize:vertical;border:1px solid var(--line);border-radius:6px;padding:10px;background:white;font-size:12px;color:var(--ink)}.selection details{margin-top:8px;padding-top:6px}.status{font-size:12px;min-height:20px;color:var(--green)}footer{font-size:11px;color:var(--muted);margin-top:24px;display:flex;justify-content:space-between;gap:14px}
+@media(min-width:1600px){.cards{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.wrap{padding:20px}.layout{grid-template-columns:170px minmax(0,1fr);gap:20px}.cards{grid-template-columns:1fr}.steps{display:none}.selection-top{align-items:flex-start}.actions{flex-wrap:wrap}}@media(max-width:600px){header{padding-bottom:16px;margin-bottom:16px}.layout{display:block}aside{border:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0 12px;margin-bottom:18px}aside h2,aside .note{grid-column:1/-1}aside .note{margin:10px 0}.selection{position:static;padding:14px}.selection-top{display:block}.actions{margin-top:10px}.wrap{padding:16px}.search{flex-wrap:wrap}.results-head{align-items:flex-start}h1{font-size:28px}footer{display:block}}
+.search button{white-space:nowrap}
+.givens,footer{overflow-wrap:anywhere}footer span{min-width:0}
+.figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:12px 0}.figure-button{display:block;border:0;padding:4px;background:white;min-width:0;width:100%;font-size:11px;color:var(--muted)}.figure-button .figure{margin:4px auto;max-height:250px}.figure-button:hover{background:#f4f7f1}.figure-dialog{border:1px solid var(--line);border-radius:12px;max-width:95vw;max-height:95vh;padding:16px}.figure-dialog::backdrop{background:#132b26aa}.figure-dialog img{display:block;max-width:85vw;max-height:78vh;object-fit:contain;margin:12px auto}.figure-dialog button{float:right}
+
+.cards{grid-template-columns:repeat(3,minmax(0,1fr))}.cards[data-view="detail"]{grid-template-columns:minmax(0,1fr)}
+.view-switch{display:flex;gap:4px;flex-shrink:0}.view-switch button{padding:6px 12px;font-size:13px}.view-switch button[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:white}
+.summary{font-size:14px;line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:14px 0;color:var(--muted)}.show-detail{font-size:12px;padding:5px 10px;margin-top:4px}
+.cards[data-view="detail"] .card{padding:26px}.cards[data-view="detail"] h2{font-size:21px}.content{white-space:pre-wrap;line-height:1.9;overflow-wrap:anywhere}.stem{font-size:16px;line-height:1.9;margin:20px 0}
+.tex-list{list-style:none;white-space:normal;margin:12px 0;padding:0}.tex-list>li{display:flex;gap:4px;align-items:flex-start;margin:8px 0}.tex-list>li>div{min-width:0;flex:1;white-space:pre-wrap}.list-number{flex-shrink:0;min-width:2.8em}.tex-list .tex-list{margin:8px 0 10px;padding-left:8px}
+.math-inline{display:inline-block;vertical-align:baseline;max-width:100%;overflow:visible}.math-display{overflow:visible;margin:14px 0;padding:3px 0}.math-display .katex-display{margin:0;overflow:visible}.math-error{color:#a54130;background:#fff3ee;padding:2px 4px}.answer-body h3{font-size:15px;color:var(--green);margin:20px 0 8px}.answers-panel{margin-top:20px;padding-top:14px}.answers-panel>summary{font-size:15px;font-weight:600}.metadata-panel{margin-top:14px}.detail-body{white-space:normal}
+.figures{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin:18px 0}.figure-button{padding:6px;font-size:12px;align-self:start;width:18rem;max-width:100%}.figure-button .figure{max-height:14rem;width:auto;height:auto;max-width:100%;object-fit:contain;margin:6px auto 8px}.content .figures{margin:18px auto}.figure-dialog img{max-width:85vw;max-height:78vh}.badge{font-size:12px}.results-head{flex-wrap:wrap}
+@media(max-width:1100px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.cards{grid-template-columns:minmax(0,1fr)}.cards[data-view="detail"] .card{padding:18px}.cards[data-view="detail"] h2{font-size:18px}.figures{grid-template-columns:minmax(0,1fr)}}
+.selection{position:static}@media(min-width:761px){.selection.has-selection{position:sticky}}
+.figure-dialog img{width:min(85vw,1100px);height:78vh;object-fit:contain}
+.math-display .katex-display>.katex>.katex-html{display:inline-block}
+.answer-content{white-space:normal;line-height:1.8}.answer-content p{margin:7px 0}.answer-content .math-display{margin:10px 0}
+.export-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:16px 0 6px}.export-tools strong{font-size:13px;margin-right:6px}.export-tools button,.export-tools select{font-size:12px;padding:5px 9px}.export-feedback{font-size:12px;color:var(--green);margin:4px 0;min-height:1.6em}.export-copy{display:block;width:100%;min-height:160px;font-size:12px;padding:10px;white-space:pre;resize:vertical}.export-preview{width:min(950px,96vw);max-height:92vh;border:1px solid var(--line);border-radius:12px;padding:20px}.export-preview::backdrop{background:#132b26aa}.export-preview-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.export-sheet{width:760px;max-width:100%;padding:24px;background:white;color:var(--ink);font-size:16px;overflow-wrap:anywhere}.export-sheet h1{font-size:22px;margin:0 0 18px}.export-sheet h2{font-size:17px;color:var(--green);margin:18px 0 8px}.export-sheet h3{font-size:15px;color:var(--green);margin:16px 0 6px}.export-sheet .figure-button{pointer-events:none;cursor:default}.export-sheet .figure-button>span{display:none}.export-sheet .figures{break-inside:avoid}.export-preview-help{font-size:12px;color:var(--muted)}
+@page{size:A4;margin:16mm}
+@media print{body{background:white}body>*{display:none!important}body>#export-dialog[open]{display:block!important;position:static;overflow:visible;width:auto;max-width:none;max-height:none;margin:0;padding:0;border:0}#export-dialog::backdrop{display:none}.export-preview-head,.export-preview-help,.export-preview-status{display:none!important}.export-sheet{width:auto;max-width:none;padding:0;font-size:11pt}.export-sheet .figure-button{width:54mm}.export-sheet .figure{max-height:45mm}.export-sheet h1{font-size:15pt}.export-sheet h2,.export-sheet h3{break-after:avoid}.export-sheet .solution-method{break-inside:avoid}.export-sheet .katex-display{overflow:visible}}
+</style>
+<div class="wrap">
+  <header>
+    <div><div class="eyebrow">MATH WORKSHEETS / QUESTION BANK</div><h1>从一道好题开始。</h1><p class="muted intro">浏览题目，选好参考题，把题号带回聊天。</p></div>
+    <div class="steps"><span class="step">1</span> 浏览筛选 <span class="step">2</span> 勾选题目 <span class="step">3</span> 复制提示词</div>
+  </header>
+  <div class="layout">
+    <aside aria-label="题目筛选">
+      <h2>缩小范围</h2>
+      <div><label for="stage">学段</label><select id="stage" data-category="stages"><option value="">全部学段</option></select></div>
+      <div><label for="subject">学科</label><select id="subject" data-category="subjects"><option value="">全部学科</option></select></div>
+      <div><label for="grade">年级</label><select id="grade" data-category="grades"><option value="">全部年级</option></select></div>
+      <div><label for="topic">知识点</label><select id="topic" data-category="topics"><option value="">全部知识点</option></select></div>
+      <div><label for="type">题型</label><select id="type" data-category="types"><option value="">全部题型</option></select></div>
+      <div><label for="difficulty">难度估计</label><select id="difficulty"><option value="">全部难度</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+      <p class="note">题号在当前题库中固定，筛选后也不变。<br>难度 1–5 以题目记录的依据为准。<br>这是离线快照；题库更新后请重新生成。</p>
+    </aside>
+    <main>
+      <p id="demo-notice" class="diagram-note" hidden>演示题库：这些题目和题号仅用于展示。请在自己的题库选择实际参考题。</p>
+      <div class="search"><input id="search" type="search" aria-label="搜索题目" placeholder="搜索题号、题干、知识点，例如 Q1 / 相似三角形"><button id="reset" type="button">重置筛选</button></div>
+      <div class="results-head"><span id="count" aria-live="polite"></span><div class="view-switch" role="group" aria-label="显示方式"><button id="view-summary" type="button" aria-pressed="true">摘要卡片</button><button id="view-detail" type="button" aria-pressed="false">详细展示</button></div></div>
+      <div id="cards" class="cards"></div>
+      <nav class="pagination" aria-label="结果分页"><button id="prev" type="button">上一页</button><span id="page"></span><button id="next" type="button">下一页</button></nav>
+    </main>
+  </div>
+  <section class="selection" aria-label="选中的参考题">
+    <div class="selection-top"><div><strong id="selection-count">已选 0 题</strong><div id="selected-list" class="selected-list"></div></div><div class="actions"><button id="clear" type="button">清空</button><button id="copy-ids" type="button">复制题号</button><button id="copy-prompt" class="primary" type="button">复制参考提示词</button></div></div>
+    <div id="status" class="status" role="status"></div>
+    <details id="prompt-panel"><summary>查看 / 手动复制内容</summary><textarea id="prompt" aria-label="参考题复制内容" readonly></textarea></details>
+  </section>
+  <footer><span id="snapshot"></span><span>本地离线浏览 · 选择参考题不会收录新题 · KaTeX / MIT</span></footer>
+</div>
+<dialog id="figure-dialog" class="figure-dialog" aria-label="放大题图"><button id="close-figure" type="button">关闭</button><p id="figure-title"></p><img id="large-figure" alt=""></dialog>
+<dialog id="export-dialog" class="export-preview" aria-label="导出预览"><div class="export-preview-head"><strong>导出预览</strong><div><button id="print-export" type="button">打印 / 保存 PDF</button> <button id="close-export" type="button">关闭预览</button></div></div><p class="export-preview-help">PDF：点击“打印 / 保存 PDF”，在浏览器打印窗口选择“另存为 PDF”；建议关闭页眉和页脚。</p><p id="export-preview-status" class="export-preview-status" role="status"></p><div id="export-sheet" class="export-sheet"></div></dialog>
+<noscript>请允许浏览器运行本地 JavaScript，以筛选题目和复制题号。</noscript>
+<script type="application/json" id="bank-data">@@MWS_DATA@@</script>
+<script>@@MWS_MATH_JS@@</script>
+<script>@@MWS_IMAGE_JS@@</script>
+<script>@@MWS_BROWSER_JS@@</script>
+</html>

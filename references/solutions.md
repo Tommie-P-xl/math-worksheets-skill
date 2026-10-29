@@ -20,6 +20,38 @@ all solutions and rounding where they matter. Show enough reasoning to verify
 the result; avoid restating the stem, long conversational prose and repetitive
 algebra. Expand only when the user asks or the reasoning needs it.
 
+## Standard mathematical answer layout
+
+Keep **each subpart and case in a separate paragraph**, with its number visible.
+Within each subpart, state the reason, place substantial equations on their own
+lines (`\[...\]`), and finish with an explicit result and any restrictions.
+Use `aligned` to align successive equalities or equation-system steps. Short
+labels and values can remain inline. Do not compress three numbered answers or
+a proof/calculation chain into one long text block. These rules apply to stored
+bank answers, worked solutions, HTML, Markdown and exported PDF/PNG alike.
+
+For example:
+
+```latex
+\textbf{（1）}
+由对应边成比例，得
+\[\frac{AD}{AC}=\frac{AC}{AB}.\]
+所以 $\boxed{AC^2=AD\cdot AB}$。
+
+\textbf{（2）}
+由已知条件代入比例式，得 $\boxed{CD=2}$。
+```
+
+For **multiple methods**, keep the primary complete method in `solution` and
+additional methods in the optional `alternative_solutions` list of
+`{"title": "几何法", "solution": "...complete TeX/text and inline drawing code..."}`.
+The viewer labels them 解法一, 解法二, etc.; Markdown and visual answer exports
+include all methods in order. Give each method its own assumptions, reasoning,
+result and needed diagrams, rather than referring vaguely to another method.
+Verify each independently and preserve any difference in applicability. Do not
+duplicate the question or change its common final-answer field merely to add a
+method. Existing records with only `solution` remain valid without migration.
+
 ## Required construction diagrams
 
 Whenever a solution introduces an auxiliary construction, include the diagram
