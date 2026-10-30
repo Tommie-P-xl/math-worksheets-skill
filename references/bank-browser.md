@@ -14,7 +14,8 @@ python SKILL_DIR/scripts/question_bank.py browse --out WORK/bank.html --open
 Install/update the skill from the latest ZIP and reload it in the agent first;
 there is no separate enable switch. Use `~/MathWorksheetsBrowse/bank.html` as a
 persistent default output when no work directory was requested. Existing schema-2
-data and archival-event-based short numbers need no migration or initialization.
+data needs no migration or initialization. Question numbers are consecutive in
+first-archival order; guide and revision events do not consume question numbers.
 For legacy schema 1 only, follow the migration procedure in
 [question-bank.md](question-bank.md). For a non-default data home, append
 `--home "ACTUAL_BANK_HOME"` to the browse command and use that same home for
@@ -79,15 +80,20 @@ Example user request after browsing:
 ## Short number contract
 
 `Q` plus a positive decimal number, with no padding or long hash: `Q1`, `Q27`.
-The number is the first `question` archival event's integer primary key. Existing
-UUIDs and schema 2 stay unchanged; there is no migration, mapping file or write
-on first browse. Guide updates and revisions also occupy event numbers, so gaps
-are expected. Numbers do not change when sorting, filtering, revising, adding
-questions or restoring the same backup. A separately created bank can have the
+The number is the question's consecutive position in first-archival order,
+starting at 1. Guide updates and question revisions do not consume numbers.
+Existing UUIDs and schema 2 stay unchanged; there is no migration, mapping file
+or write on first browse. Numbers do not change when sorting, filtering, revising,
+adding questions or restoring the same backup. A separately created bank can have the
 same numbers; JSONL export alone is not a backup of the numbering/history.
 
 Commands return `id` (original internal ID), `short_id` and `revision`. Use the
 internal ID from `show`/`select` in revision proposals and guide-review commands.
+When upgrading from event-based numbers, old gaps close and subsequent question
+numbers move forward. Regenerate old snapshots and reselect references using the
+current titles/revisions; do not interpret old event-based numbers as aliases,
+because they may now name a different question.
+
 A record without an archival event is not assigned an invented number; inspect
 its history and use its full ID instead. Normal approved inserts always have one.
 

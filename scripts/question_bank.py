@@ -438,11 +438,14 @@ class Bank:
             return [] if con is None else [dict(r) for r in con.execute("SELECT * FROM problems ORDER BY updated DESC,id")]
 
     def short_ids(self):
-        """Use immutable first archival event numbers; browsing needs no schema/write."""
+        """Number questions consecutively by first archival order, without writes."""
         with self.connection() as con:
             return {} if con is None else {
-                row["target"]: "Q" + str(row["number"])
-                for row in con.execute("SELECT target,MIN(id) AS number FROM events WHERE kind='question' GROUP BY target")
+                row["target"]: "Q" + str(number)
+                for number, row in enumerate(con.execute(
+                    "SELECT e.target,MIN(e.id) AS first_event FROM events e "
+                    "JOIN problems p ON p.id=e.target WHERE e.kind='question' "
+                    "GROUP BY e.target ORDER BY first_event,e.target"), 1)
             }
 
     def get(self, identity):

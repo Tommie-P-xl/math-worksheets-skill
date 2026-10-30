@@ -56,13 +56,15 @@ class BrowserTests(unittest.TestCase):
         self.assertEqual(revised["short_id"], "Q1")
         self.assertEqual(self.bank.get(first["id"]), self.bank.get("Q1"))
         later = self.save(stem="计算 $7+8$。", answer="15", solution="相加得15。")
-        self.assertEqual(later["short_id"], "Q4")  # guide and revision events occupy 2 and 3
+        self.assertEqual(later["short_id"], "Q2")  # guide/revision events do not consume question numbers
+        self.assertEqual(set(self.bank.short_ids().values()), {"Q1", "Q2"})
+        self.assertEqual(self.bank.get("Q2")["item"]["stem"], "计算 $7+8$。")
         snapshot = self.work / "backup.zip"
         self.bank.backup(snapshot)
         restored = qb.Bank(self.work / "restored")
         restored.restore(snapshot)
         self.assertEqual(restored.get("Q1"), self.bank.get("Q1"))
-        self.assertEqual(restored.get("Q4"), self.bank.get("Q4"))
+        self.assertEqual(restored.get("Q2"), self.bank.get("Q2"))
 
     def test_selected_references_preserve_order_deduplicate_aliases_and_enforce_cap(self):
         first = self.save()
@@ -80,6 +82,16 @@ class BrowserTests(unittest.TestCase):
         with self.assertRaisesRegex(qb.BankError, "reference_limit"):
             self.bank.select(["Q1", second["short_id"]], ["stem"])
         self.assertEqual(self.bank.select(["Q1", first["id"]], ["stem"])["reference_count"], 1)
+
+    def test_question_numbers_start_at_one_after_existing_guide_history(self):
+        guide = self.work / "guide.md"
+        guide.write_text("# 初中数学\n方程先检查等式变形。", encoding="utf-8")
+        preview = self.bank.guide_preview("初中", "数学", guide)
+        self.bank.guide_commit("初中", "数学", guide, approved=preview["receipt"], note="synthetic consent")
+        first = self.save()
+        second = self.save(stem="计算 $8-3$。", answer="5", solution="相减得5。")
+        self.assertEqual((first["short_id"], second["short_id"]), ("Q1", "Q2"))
+        self.assertEqual(self.bank.select(["Q2", "Q1"], ["stem"])["references"][0]["id"], second["id"])
 
     def test_show_and_select_cli_resolve_short_numbers_to_canonical_ids(self):
         saved = self.save()
@@ -133,7 +145,7 @@ class BrowserTests(unittest.TestCase):
         self.assertEqual(question["item"]["stem"], source)
         self.assertEqual(self.bank.get("Q1")["item"]["stem"], source)
         self.assertEqual([n["type"] for n in question["content"]["stem"]], ["paragraph"]*3)
-        self.assertIn("并不代表漏题", out.read_text(encoding="utf-8"))
+        self.assertIn("指南更新和题目修订不占题号", out.read_text(encoding="utf-8"))
 
     def test_snapshot_is_read_only_moveable_and_treats_question_markup_as_data(self):
         stem = '文字 </script><script>alert(1)</script> @@MWS_MATH_JS@@ $\\frac{1}{2}$'

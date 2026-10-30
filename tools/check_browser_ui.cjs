@@ -30,6 +30,7 @@ async function main() {
     await page.goto(pathToFileURL(file).href);
     const bank = JSON.parse(await page.locator('#bank-data').textContent());
     assert.ok(bank.questions.length >= 3);
+    assert.deepEqual(bank.questions.map(question => question.short_id), bank.questions.map((_, index) => 'Q' + (index + 1)));
     assert.deepEqual(bank.questions.flatMap(question => [question.preview_note, ...question.content_notes.map(note => note.note)]).filter(Boolean), [], 'The test snapshot must have complete figure previews');
     assert.equal(await page.locator('#view-summary').getAttribute('aria-pressed'), 'true');
     assert.equal(await page.locator('.cards img').count(), 0);
@@ -45,7 +46,7 @@ async function main() {
     await page.getByRole('button', {name: '重置筛选', exact: true}).click();
     await page.getByRole('searchbox').fill('Q999999');
     assert.ok((await page.locator('.empty').innerText()).includes('当前题库没有 Q999999'));
-    assert.ok((await page.locator('.empty').innerText()).includes('并不代表漏题'));
+    assert.ok((await page.locator('.empty').innerText()).includes('连续编号'));
     await page.getByRole('button', {name: '重置筛选', exact: true}).click();
     if (process.env.MWS_SCREENSHOT_DIR) {
       fs.mkdirSync(process.env.MWS_SCREENSHOT_DIR, {recursive: true});

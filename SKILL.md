@@ -60,7 +60,10 @@ verification or archival. See the browser reference for export details.
 For short numbers such as `Q1、Q3`, resolve those exact
 records with `select Q1 Q3` in the indicated bank home. Inspect the complete
 needed fields, check copied titles/revisions against current records and flag
-differences. Count selected references and guides toward `reference_limit`;
+differences. Question numbers are consecutive in first-archival order; guide
+updates and revisions do not consume numbers. Older event-numbered snapshots
+must be regenerated and references reselected after upgrading.
+Count selected references and guides toward `reference_limit`;
 do not substitute a broad search for explicit selections. Selecting references
 is read-only and does not approve archiving generated items.
 
