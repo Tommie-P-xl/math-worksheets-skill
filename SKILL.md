@@ -189,7 +189,10 @@ Geometry point/side labels must have transparent backgrounds and sit clear of
 all nearby segments, arcs and other labels. Move the anchor/position or add a
 small offset into a free sector; never hide a collision with white fill. Inspect
 the actual rendered diagram at its final print size, including internal points
-and multi-line intersections. See [solutions.md](references/solutions.md).
+and multi-line intersections. Coordinate-plane figures must include the origin,
+both axes, positive-direction arrows and axis names, extending beyond the plotted
+objects; labels must clear the axes too. Missing axes in saved drawing code need
+an authorized record revision, not a browser guess. See [solutions.md](references/solutions.md).
 
 Read [latex-templates.md](references/latex-templates.md) for document shells and
 figure styles. Each document must `\input{worksheet-preamble}`; do not retype or

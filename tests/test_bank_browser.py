@@ -124,6 +124,17 @@ class BrowserTests(unittest.TestCase):
         with self.assertRaises(qb.BankError):
             self.save(alternative_solutions=[{"title": "外部图", "solution": r"\includegraphics{x.png}"}])
 
+    def test_legacy_stem_preview_uses_paragraphs_and_keeps_original_record(self):
+        source = "已知直线l1。（1）若角ACD=角B，求证。（2）在（1）的条件下计算。"
+        self.save(stem=source)
+        out = self.work / "legacy.html"
+        browser.export_browser(self.bank, out, render_diagrams=False)
+        question = self.packet(out)["questions"][0]
+        self.assertEqual(question["item"]["stem"], source)
+        self.assertEqual(self.bank.get("Q1")["item"]["stem"], source)
+        self.assertEqual([n["type"] for n in question["content"]["stem"]], ["paragraph"]*3)
+        self.assertIn("并不代表漏题", out.read_text(encoding="utf-8"))
+
     def test_snapshot_is_read_only_moveable_and_treats_question_markup_as_data(self):
         stem = '文字 </script><script>alert(1)</script> @@MWS_MATH_JS@@ $\\frac{1}{2}$'
         self.save(stem=stem)

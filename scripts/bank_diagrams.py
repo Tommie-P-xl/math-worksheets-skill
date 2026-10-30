@@ -38,13 +38,23 @@ def preview_picture(picture):
                 and match[3][1] == match[2][0])
     points = {m[2]: coordinates[m[2]] for m in labels if point_label(m)}
     segments = []
+    def endpoint(value):
+        if value in coordinates:
+            return coordinates[value]
+        numeric = re.fullmatch(r"\s*(" + NUMBER + r")\s*,\s*(" + NUMBER + r")\s*", value)
+        if numeric:
+            return float(numeric[1]), float(numeric[2])
+
     for path in re.finditer(r"\\(?:draw|path)(?:\[[^\n]*?\])?([^;]*);", picture):
         vertices = list(re.finditer(r"\(([^)]+)\)", path[1]))
         for a, b in zip(vertices, vertices[1:]):
-            if a[1] in coordinates and b[1] in coordinates and "--" in path[1][a.end():b.start()]:
-                segments.append((coordinates[a[1]], coordinates[b[1]]))
-        if vertices and "cycle" in path[1] and vertices[-1][1] in coordinates and vertices[0][1] in coordinates:
-            segments.append((coordinates[vertices[-1][1]], coordinates[vertices[0][1]]))
+            start, end = endpoint(a[1]), endpoint(b[1])
+            if start is not None and end is not None and re.fullmatch(r"\s*--\s*", path[1][a.end():b.start()]):
+                segments.append((start, end))
+        if vertices and re.match(r"\s*--\s*cycle\b", path[1][vertices[-1].end():]):
+            start, end = endpoint(vertices[-1][1]), endpoint(vertices[0][1])
+            if start is not None and end is not None:
+                segments.append((start, end))
     if not points or not segments:
         return picture
     placed = place_labels(points, segments, scale_cm=scale, font_pt=11)

@@ -33,6 +33,9 @@ def group_at(text, pos, opening="{", closing="}"):
 
 def plain_nodes(text):
     """Recognize legacy, undelimited maths without rewriting its arithmetic."""
+    # Old records use Chinese angle prefixes and plain line names. Only handle
+    # unambiguous geometry notation here; explicitly delimited TeX bypasses this.
+    text = re.sub(r"角(?=[A-Z](?![a-z]))", "∠", text)
     result, last = [], 0
     for match in MATH_RUN.finditer(text):
         value = match.group()
@@ -41,6 +44,7 @@ def plain_nodes(text):
         if match.start() > last:
             result.append({"type": "text", "text": text[last:match.start()]})
         value = re.sub(r"(?<![A-Za-z\\])(sqrt|sin|cos|tan|log|ln)(?=[{(0-9])", r"\\\1", value)
+        value = re.sub(r"(?<![A-Za-z\\])l([0-9]+)(?![A-Za-z0-9])", r"l_{\1}", value)
         value = value.translate(str.maketrans({"∠": r"\angle ", "△": r"\triangle ", "Δ": r"\triangle ",
                                               "∥": r"\parallel ", "⊥": r"\perp ", "≥": r"\ge ", "≤": r"\le ", "≠": r"\ne ",
                                               "−": "-", "°": r"^\circ ", "²": "^2", "³": "^3"}))
@@ -255,7 +259,8 @@ def answer_layout(text):
                 end += len(end_marker)
                 parts.append(text[pos:end]); pos = end
                 continue
-        marker = (ANSWER_MARKER.match(text, pos) or '\u2460' <= text[pos] <= '\u2473') and (pos == 0 or text[pos - 1].isspace() or text[pos - 1] in "。；;" or text[max(0, pos - 4):pos] == r"\par")
+        circled = '\u2460' <= text[pos] <= '\u2473'
+        marker = (ANSWER_MARKER.match(text, pos) or circled) and (pos == 0 or text[pos - 1].isspace() or text[pos - 1] in "。；;" or circled and text[pos - 1] in "，,：:" or text[max(0, pos - 4):pos] == r"\par")
         if depth == 0 and (text.startswith(r"\textbf{", pos) or marker):
             if parts and not "".join(parts[-2:]).endswith("\n\n"):
                 parts.append("\n" if "".join(parts[-2:]).endswith("\n") else "\n\n")

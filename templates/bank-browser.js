@@ -408,7 +408,8 @@ function render() {
   $('cards').replaceChildren(...visible.slice((page - 1) * pageSize, page * pageSize).map(card));
   if (!visible.length) {
     const empty = node('div', undefined, 'empty');
-    empty.append(node('strong', bank.questions.length ? '没有符合条件的题目' : '题库还没有题目'), node('p', bank.questions.length ? '试试其他关键词，或重置筛选。' : '先在聊天中审核并批准收录题目，再重新生成浏览页。'));
+    const missingNumber = /^q\d+$/.test(query) && !bank.questions.some(question => question.short_id.toLowerCase() === query);
+    empty.append(node('strong', missingNumber ? '当前题库没有 ' + query.toUpperCase() : bank.questions.length ? '没有符合条件的题目' : '题库还没有题目'), node('p', missingNumber ? '题号取自收录历史，指南更新等事件也占编号，因此可能跳号；并不代表漏题。' : bank.questions.length ? '试试其他关键词，或重置筛选。' : '先在聊天中审核并批准收录题目，再重新生成浏览页。'));
     $('cards').append(empty);
   }
   $('page').textContent = page + ' / ' + pages;

@@ -113,8 +113,8 @@ def export_browser(bank, out, demo=False, render_diagrams=True):
         content["title"] = content_nodes(item["title"])
         content["summary"] = content_nodes(item["summary"])
         for field in ("stem", "answer", "solution"):
-            text = item[field] if field == "stem" else answer_layout(item[field])
-            content[field], count, note = render_content(text, render_diagrams, paragraphs=field != "stem")
+            text = answer_layout(item[field])
+            content[field], count, note = render_content(text, render_diagrams, paragraphs=True)
             answer_images += count
             if note:
                 content_notes.append({"field": field, "note": note})

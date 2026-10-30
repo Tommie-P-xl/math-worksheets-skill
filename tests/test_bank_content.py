@@ -22,6 +22,41 @@ def walk(nodes):
 
 
 class ContentTests(unittest.TestCase):
+    def test_legacy_geometry_angles_and_line_names_share_formula_renderer(self):
+        nodes = content_nodes(r"若角ACD=角B，角CDB=角CBD=30°。直线l1:y=x+2与l12交于A。$l_2$与$\angle A$保留。")
+        maths = [node["text"] for node in walk(nodes) if node["type"] == "math"]
+        self.assertIn(r"\angle ACD=\angle B", maths)
+        self.assertIn(r"\angle CDB=\angle CBD=30^\circ ", maths)
+        self.assertIn(r"l_{1}", maths)
+        self.assertIn(r"l_{12}", maths)
+        self.assertIn("l_2", maths)
+        self.assertIn(r"\angle A", maths)
+        self.assertEqual(content_nodes("三角形ABC的角度"), [{"type": "text", "text": "三角形"}, {"type": "math", "text": "ABC", "display": False}, {"type": "text", "text": "的角度"}])
+
+    def test_legacy_stem_subparts_have_paragraphs_without_splitting_references(self):
+        source = r"已知 $A(1,2)$。（1）若条件成立，①求值；②证明。（2）在（1）的条件下，求结论。"
+        formatted = answer_layout(source)
+        self.assertIn("\n\n（1）", formatted)
+        self.assertIn("\n\n①", formatted)
+        self.assertIn("\n\n②", formatted)
+        self.assertIn("在（1）的条件下", formatted)
+        with patch("bank_browser.render_diagram", return_value=([], "")):
+            nodes, _, _ = render_content(formatted, paragraphs=True)
+        self.assertEqual(sum(node["type"] == "paragraph" for node in nodes), 5)
+
+    def test_numeric_and_mixed_axis_segments_are_label_obstacles(self):
+        source = r"\begin{tikzpicture}[scale=1.1]\coordinate(A)at(0,2.4);\coordinate(B)at(-1.8,0);\coordinate(C)at(3.2,0);\coordinate(O)at(0,0);\draw(A)--(C);\draw(B)--(A);\draw[-{Stealth}](-2.15,0)--(3.65,0);\draw[-{Stealth}](0,-.25)--(0,3.1);\draw(-2,-.2667)--(.45,3);\draw(O)--(0,3.1);\node[left]at(A){$A$};\node[below]at(B){$B$};\node[below]at(C){$C$};\node[below left]at(O){$O$};\end{tikzpicture}"
+        with patch("bank_diagrams.place_labels", wraps=__import__("geometry_labels").place_labels) as place:
+            preview = preview_picture(source)
+        segments = place.call_args.args[1]
+        self.assertIn(((-2.15, 0), (3.65, 0)), segments)
+        self.assertIn(((0, -.25), (0, 3.1)), segments)
+        self.assertIn(((0, 0), (0, 3.1)), segments)
+        unit = 1.1 * 72.27 / 2.54
+        for x,y,_ in re.findall(r"at \(([-0-9.]+),([-0-9.]+)\) \{\$([A-Z])\$\}", preview):
+            box = (float(x)*unit-4.4, float(y)*unit-4.675, float(x)*unit+4.4, float(y)*unit+4.675)
+            self.assertFalse(any(segment_hits_box((a[0]*unit,a[1]*unit),(b[0]*unit,b[1]*unit),box,1.4) for a,b in segments))
+
     def test_answer_paragraphs_preserve_math_code_and_inline_references(self):
         source = r"（1）由条件得 $x=1$。结合（1）可知结论。（2）计算\[f(1)=2\]。"
         formatted = answer_layout(source)

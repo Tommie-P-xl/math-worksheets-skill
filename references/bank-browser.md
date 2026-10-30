@@ -95,7 +95,7 @@ its history and use its full ID instead. Normal approved inserts always have one
 
 ### Copy or export one question
 
-Answers separate numbered subparts and prose paragraphs, with substantial
+Stems and answers separate numbered subparts and prose paragraphs, with substantial
 derivations on their own lines. Legacy dense prose receives conservative paragraph
 breaks without changing mathematical source or drawing code. Multiple saved
 methods appear as numbered sections; all answer exports include each method's
@@ -135,7 +135,9 @@ exceed their content width scale to fit instead of showing tiny scrollbars.
   Common LaTeX text wrappers, `\textbf`, `\par`, nested enumerate/itemize lists,
   circled subpart labels, blanks and `\ans` are rendered as readable content.
   Older undelimited math runs are recognized for display, including `sqrt`
-  notation; arithmetic and saved source are preserved. Unsupported math remains visible as source/error text. This is a preview, not
+  notation, Chinese angle prefixes such as `角ACD` and plain line names `l1`/`l2`
+  (shown as `\angle ACD` and `l_1`/`l_2`); arithmetic and saved source are preserved.
+  Explicitly delimited TeX is not rewritten. Unsupported math remains visible as source/error text. This is a preview, not
   a replacement for the full LaTeX worksheet build.
 - Simple stored SVG geometry and plots render as an image. The supported static
   subset includes paths, lines, polygons, circles, text and groups with geometry,
@@ -148,7 +150,9 @@ exceed their content width scale to fit instead of showing tiny scrollbars.
   wrapped in worksheet minipages. Bare TikZ/axis code is wrapped in a picture.
   Numeric-coordinate geometry is enlarged when its original physical scale is
   too small; recognized Latin point labels are positioned clear of straight
-  segments and other labels using the shipped geometry helper. Coordinates and
+  segments and other labels using the shipped geometry helper. Straight paths
+  with named, numeric or mixed endpoints all count, including coordinate axes.
+  Coordinates and
   geometry are not changed. Images are embedded in the HTML, displayed and
   enlarged only in detailed mode. No TeX engine is bundled into the ZIP or
   loaded in the browser.

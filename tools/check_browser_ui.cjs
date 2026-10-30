@@ -43,6 +43,10 @@ async function main() {
     assert.equal(await page.locator('.card').count(), 1);
     assert.equal(await page.getByRole('checkbox', {name: '选择参考题 ' + chosen[0].short_id, exact: true}).isChecked(), true);
     await page.getByRole('button', {name: '重置筛选', exact: true}).click();
+    await page.getByRole('searchbox').fill('Q999999');
+    assert.ok((await page.locator('.empty').innerText()).includes('当前题库没有 Q999999'));
+    assert.ok((await page.locator('.empty').innerText()).includes('并不代表漏题'));
+    await page.getByRole('button', {name: '重置筛选', exact: true}).click();
     if (process.env.MWS_SCREENSHOT_DIR) {
       fs.mkdirSync(process.env.MWS_SCREENSHOT_DIR, {recursive: true});
       await page.setViewportSize({width: 1600, height: 2000});
